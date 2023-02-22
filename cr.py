@@ -68,17 +68,22 @@ SPEAKER_TAGS = [
 ]
 EPISODE_DECODER = {
     '3': ('Campaign 3', 'List of Campaign 3 episodes',
-          'Campaign 3 episode thumbnails', 'Template:Nav-C3Arc1'),
-    'OS': ('One-shots', 'One-shots', 'One-shot episode thumbnails', 'Template:Nav-OneShots'),
+          'Campaign 3 episode thumbnails', 'Template:Nav-C3Arc1',
+          'Category:Campaign 3 transcripts'),
+    'OS': ('One-shots', 'One-shots', 'One-shot episode thumbnails',
+           'Template:Nav-OneShots', 'Category:One-shot transcripts'),
     'M': ('Bits and bobs', 'Bits and bobs',
-          'Bits and bobs episode thumbnails',  'Template:Nav-Bitsnbobs'),
+          'Bits and bobs episode thumbnails',  'Template:Nav-Bitsnbobs',
+          'Category:Transcripts'),
     'LVM2': ('The Legend of Vox Machina',
             'List of The Legend of Vox Machina episodes',
             'The Legend of Vox Machina episode thumbnails',
             'Template:Nav-LoVM Season 2',
-            ),
-    '4SD': ('4-Sided Dive', '4-Sided Dive', 'Episode thumbnails', 'Template:Nav-4SD'),
-    # 'Ep_type': ('show page', 'episode list page', 'episode thumbnail category', 'navbox'),
+            'Category:Transcripts'),
+    '4SD': ('4-Sided Dive', '4-Sided Dive', 'Episode thumbnails', 'Template:Nav-4SD',
+            'Category:Transcripts'),
+    # 'Ep_type': ('show page', 'episode list page',
+    # 'episode thumbnail category', 'navbox', 'transcript category'),
 }
 
 # Episode codes where the transcript will not be added (-transcript is auto-skipped)
@@ -179,6 +184,10 @@ class Ep:
     @property
     def navbox_name(self):
         return EPISODE_DECODER[self.prefix][3]
+
+    @property
+    def transcript_category(self):
+        return EPISODE_DECODER[self.prefix][4]
 
     @property
     def image_filename(self):
@@ -688,8 +697,12 @@ class Transcript:
         # Step 4: add commented_out error messages to top of transcript
         ts = self.process_errors(ts)
 
-        # Step 5: add navigation
-        ts = '{{Transcript-Nav}}\n__FORCETOC__\n\n' + ts + '\n{{Transcript-Nav}}'
+        # Step 5: add navigation and category
+        t_cat = self.ep.transcript_category
+        ts = ''.join(['{{Transcript-Nav}}\n__FORCETOC__\n\n', 
+                      ts,
+                      '\n{{Transcript-Nav}}\n', 
+                      f'[[{t_cat}]]'])
 
         if self.write_ts_file:
             with open(f'{self.ep.code}_fixed.{self.ext}', 'w') as f:
