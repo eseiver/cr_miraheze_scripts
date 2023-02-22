@@ -34,7 +34,7 @@ A number of maintenance activities can be performed together (-all) or independe
 
 -transcript       Create transcript page (auto-skips TRANSCRIPT_EXCLUSIONS)
 
--transcript_list  Add /transcript page to list of transcripts (auto-skips TRANSCRIPT_EXCLUSIONS)
+-transcript_list  Add transcript page to list of transcripts (auto-skips TRANSCRIPT_EXCLUSIONS)
 
 -upload           Upload and link to the episode thumbnail; ignored if already exists
 
@@ -600,7 +600,7 @@ class TranscriptBot(EpisodeBot):
         return transcript
 
     def treat_page(self):
-        url = self.opt.new_page_name + '/Transcript'
+        url = 'Transcript:' + self.opt.new_page_name
         self.current_page = pywikibot.Page(self.site, url)
         if self.current_page.exists() and self.current_page.text:
             pywikibot.output(f'Transcript page already exists for {self.opt.new_page_name}; transcript creation skipped')
@@ -612,7 +612,7 @@ class TranscriptBot(EpisodeBot):
 class TranscriptListBot(EpisodeBot):
     '''For updating the list of transcripts with the transcript of the newest episode.'''
     def build_transcript_entry(self):
-        transcript_entry = f"""* {self.opt.ep.wiki_code} [[{self.opt.new_page_name}/Transcript|Transcript]]"""
+        transcript_entry = f"""* {self.opt.ep.wiki_code} [[Transcript:{self.opt.new_page_name}|Transcript]]"""
         return transcript_entry
 
     def treat_page(self):
