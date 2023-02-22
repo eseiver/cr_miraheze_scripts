@@ -15,7 +15,7 @@ These pywikibot scripts are for maintaining Encyclopedia Exandria at <https://cr
 Create a folder called `pywikibot` somewhere easy to access on your computer. Open your [command line tool](https://en.wikipedia.org/wiki/Command-line_interface) and navigate to that folder. In there run:
 
 ```git clone https://github.com/eseiver/cr_miraheze_scripts```
-```git clone https://gerrit.wikimedia.org/r/pywikibot/core.git```
+```git clone -b stable https://gerrit.wikimedia.org/r/pywikibot/core.git```
 
 Then run:
 
