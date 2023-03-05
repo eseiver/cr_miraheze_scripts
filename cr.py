@@ -423,6 +423,48 @@ class Airdate:
         datetime_string = datetime.strftime(self.datetime.astimezone(tz=self.tz), '%Y-%m-%d %H:%M %Z')
         return datetime_string
 
+    def __repr__(self):
+        return self.date_and_time
+
+    def __eq__(self, other): 
+        if not isinstance(other, Airdate):
+            # don't attempt to compare against unrelated types
+            return False
+
+        return self.datetime == other.datetime
+
+    def __lt__(self, other): 
+        if not isinstance(other, Airdate):
+            # don't attempt to compare against unrelated types
+            return False
+
+        return self.datetime < other.datetime
+
+    def __le__(self, other): 
+        if not isinstance(other, Airdate):
+            # don't attempt to compare against unrelated types
+            return False
+
+        return self.datetime <= other.datetime
+
+    def __gt__(self, other): 
+        if not isinstance(other, Airdate):
+            # don't attempt to compare against unrelated types
+            return False
+
+        return self.datetime > other.datetime
+
+    def __ge__(self, other): 
+        if not isinstance(other, Airdate):
+            # don't attempt to compare against unrelated types
+            return False
+
+        return self.datetime >= other.datetime
+
+    def __hash__(self):
+        # necessary for dicts and sets
+        return hash((self.datetime))
+
 
 def remove_comments(wikicode, return_string=True):
     '''For an item of wikicode, strip out comments. Used to determine if an infobox value
@@ -661,7 +703,7 @@ class Transcript:
                 second_idx = new_line.rfind(repeated_sentence)
                 distance_between_lines = second_idx-(first_idx+len(repeated_sentence))
                 if (-1 < distance_between_lines < 3 and line.count(repeated_sentence) == 2
-                    and (repeated_sentence[0].lower() == repeated_sentence[0] or 
+                    and (repeated_sentence[0].islower() or 
                          repeated_sentence[-1] not in ['!', '?', '.'])):
                     new_line = f'{repeated_sentence}<!-- potential duplicate -->'.join(new_line.rsplit(repeated_sentence, 1))
                 else:
@@ -702,7 +744,7 @@ class Transcript:
         ts = ''.join(['{{Transcript-Nav}}\n__FORCETOC__\n\n', 
                       ts,
                       '\n{{Transcript-Nav}}\n', 
-                      f'[[{t_cat}]]'])
+                      f'[[{t_cat}]][[Category:Transcripts with duplicate lines]]'])
 
         if self.write_ts_file:
             with open(f'{self.ep.code}_fixed.{self.ext}', 'w') as f:
