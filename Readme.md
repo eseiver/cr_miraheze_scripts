@@ -12,10 +12,10 @@ These pywikibot scripts are for maintaining Encyclopedia Exandria at <https://cr
 
 ### Cloning pywikibot and this repo
 
-Decide what folder you'd like to place the pywikibot folder inside, somewhere easy to access on your computer. Open your [command line tool](https://en.wikipedia.org/wiki/Command-line_interface) and navigate to that folder. In there run:
+Decide what folder you'd like to place the pywikibot folder inside, somewhere easy to access on your computer. Open your [command line tool](https://en.wikipedia.org/wiki/Command-line_interface) and navigate to that folder. In that location run:
  
 ```git clone -b stable https://gerrit.wikimedia.org/r/pywikibot/core.git pywikibot```  
-```git clone https://github.com/eseiver/cr_miraheze_scripts pywikibot/scripts/userscripts/cr_miraheze_scripts```
+```git clone https://github.com/eseiver/cr_miraheze_scripts pywikibot/scripts/userscripts/cr_miraheze_scripts```  
 ```pip install pywikibot nltk youtube_transcript_api```
 
 Now whenever you want to get the latest pywikibot or cr_miraheze_scripts updates, you can go into the pywikibot folder and run `git pull` (first running `git fetch` and `git status` to compare the two states). (To update the miraheze scripts while in the top-level pywikibot folder, add the folder location after `git`, such as `git -C scripts/userscripts/cr_miraheze_scripts pull`.) This process will not overwrite any user files you create in the next step.
