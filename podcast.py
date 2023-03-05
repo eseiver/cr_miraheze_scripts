@@ -3,6 +3,9 @@ The URL for the podcast can be directly supplied by the user, or inferred from C
 It take two arguments:
 -ep:    REQUIRED. The CxNN code of the episode with newly uploaded podcast
 -url:   Optional. The URL for the podcast
+
+Example from top-level pywikibot folder:
+>>> python pwb.py podcast -ep:3x60
 """
 
 import re

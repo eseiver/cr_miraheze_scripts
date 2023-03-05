@@ -26,7 +26,7 @@ Generate the wiki-specific files you need for logging into Miraheze by following
 
 ### Update user-config file
 
-Then update your `user-config.py` file in "pywikibot/core/" to include:
+Then update your `user-config.py` file in the top-level pywikibot folder to include the line:
 
 ```user_script_paths = ['scripts.userscripts.cr_miraheze_scripts']```
 
