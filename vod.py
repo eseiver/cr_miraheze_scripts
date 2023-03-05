@@ -263,6 +263,7 @@ class EpisodeBot(
 
         infobox['VOD'] = ep.wiki_vod
         infobox['Podcast'] = ep.wiki_podcast
+        infobox['EpCode'] = ep.code
 
         if self.opt.runtime and not does_value_exist(infobox, param_name='Runtime'):
             infobox['Runtime'] = ' ' + self.opt.runtime.lstrip()
