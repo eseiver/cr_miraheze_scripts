@@ -744,7 +744,8 @@ class Transcript:
         ts = ''.join(['{{Transcript-Nav}}\n__FORCETOC__\n\n', 
                       ts,
                       '\n{{Transcript-Nav}}\n', 
-                      f'[[{t_cat}]][[Category:Transcripts with duplicate lines]]'])
+                      f'[[{t_cat}]]',
+                      '\n[[Category:Transcripts with duplicate lines]]'])
 
         if self.write_ts_file:
             with open(f'{self.ep.code}_fixed.{self.ext}', 'w') as f:
