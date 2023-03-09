@@ -16,7 +16,7 @@ Decide what folder you'd like to place the pywikibot folder inside, somewhere ea
  
 ```git clone -b stable https://gerrit.wikimedia.org/r/pywikibot/core.git pywikibot```  
 ```git clone https://github.com/eseiver/cr_miraheze_scripts pywikibot/scripts/userscripts/cr_miraheze_scripts```  
-```pip install pywikibot nltk youtube_transcript_api```
+```pip install pywikibot nltk youtube_transcript_api beautifulsoup4```
 
 Now whenever you want to get the latest pywikibot or cr_miraheze_scripts updates, you can go into the pywikibot folder and run `git pull` (first running `git fetch` and `git status` to compare the two states). (To update the miraheze scripts while in the top-level pywikibot folder, add the folder location after `git`, such as `git -C scripts/userscripts/cr_miraheze_scripts pull`.) This process will not overwrite any user files you create in the next step.
 
