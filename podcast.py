@@ -135,7 +135,7 @@ class PodcastBot(SingleSiteBot, ExistingPageBot):
         elif prev_ep.code in text:
             prev_entry = next(x for x in text.splitlines()
                 if any([y in x for y in prev_ep.generate_equivalent_codes()]))
-            new_entry = f'    ["{ep.code}"]  = "{url}",'
+            new_entry = f'    ["{ep.code}"] = "{url}",'
             text = text.replace(prev_entry,
                                 '\n'.join([prev_entry, new_entry])
                                 )
