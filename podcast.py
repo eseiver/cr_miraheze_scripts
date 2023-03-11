@@ -113,8 +113,11 @@ class PodcastBot(SingleSiteBot, ExistingPageBot):
         self.initialize()
         ep = self.opt.ep
         text = self.opt.text
-        existing_url = re.search(fr'\["{ep.code}"\]\s*=\s*"(?P<existing_url>.*?)",',
-                                 text).groupdict().get('existing_url')
+        if ep.code in text:
+            existing_url = re.search(fr'\["{ep.code}"\]\s*=\s*"(?P<existing_url>.*?)",',
+                                    text).groupdict().get('existing_url')
+        else:
+            existing_url = ''
         return existing_url
 
 
