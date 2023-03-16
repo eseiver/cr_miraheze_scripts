@@ -111,6 +111,7 @@ from pywikibot.bot import (
     QuitKeyboardInterrupt,
 )
 from cr import *
+from transcript import *
 from pywikibot.specialbots import UploadRobot
 
 
