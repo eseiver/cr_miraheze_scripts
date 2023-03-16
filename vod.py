@@ -110,8 +110,8 @@ from pywikibot.bot import (
     SingleSiteBot,
     QuitKeyboardInterrupt,
 )
-from cr import *
-from transcript import *
+from .cr import *
+from .transcript import *
 from pywikibot.specialbots import UploadRobot
 
 
