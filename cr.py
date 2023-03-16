@@ -520,6 +520,54 @@ def text_to_ngram_dict(text, ngram_min=4, ngram_max=None):
     ngram_dict = sort_ngram_list(ngram_list)
     return ngram_dict
 
+'''Below is a temporary solution to the problem documented here: https://github.com/jdepoix/youtube-transcript-api/pull/192
+If/when this change goes live, the content from here to the next comment marker should be deleted.'''
+
+TEXT_FORMATS = [
+    'strong',  # important
+    'em',  # emphasized
+    'b',  # bold
+    'i',  # italic
+    'mark',  # marked
+    'small',  # smaller
+    'del',  # deleted
+    'ins',  # inserted
+    'sub',  # subscript
+    'sup',  # superscript
+]
+from html import unescape
+from xml.etree import ElementTree
+
+class _TranscriptParserNew(object):
+    def __init__(self, preserve_formatting=True):
+        self.preserve_formatting = preserve_formatting
+
+    @property
+    def html_regex(self):
+        if self.preserve_formatting:
+            formats_regex = '|'.join(TEXT_FORMATS)
+            formats_regex = r'<\/?(?!\/?(' + formats_regex + r')\b).*?\b>'
+            html_regex = re.compile(formats_regex, re.IGNORECASE)
+        else:
+            html_regex = re.compile(r'<[^>]*>', re.IGNORECASE)
+        return html_regex
+
+    def parse(self, plain_data):
+        return [
+            {
+                'text': re.sub(self.html_regex, '', unescape(xml_element.text)),
+                'start': float(xml_element.attrib['start']),
+                'duration': float(xml_element.attrib.get('dur', '0.0')),
+            }
+            for xml_element in ElementTree.fromstring(plain_data)
+            if xml_element.text is not None
+        ]
+import youtube_transcript_api
+youtube_transcript_api._transcripts._TranscriptParser = _TranscriptParserNew
+'''End deletion HERE. After deleting, update the function in Transcript to read:
+transcript_list = YouTubeTranscriptApi.list_transcripts(self.yt.yt_id,
+                                                                preserve_formatting=self.preserve_formatting)'''
+
 
 class Transcript:
     def __init__(self, ep, yt, ext='txt', write_ts_file=False, **kwargs):
@@ -528,6 +576,7 @@ class Transcript:
         self.ext = ext
         self.filename = f"{self.ep.code}.{self.ext}"
         self.write_ts_file = write_ts_file
+        self.preserve_formatting = True
 
     def download_and_build_transcript(self):
         self._raw_captions = self.captions_download()
