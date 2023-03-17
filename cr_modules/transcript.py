@@ -21,7 +21,10 @@ def sort_ngram_list(ngram_list):
     return ngram_dict
 
 
-def text_to_ngram_dict(text, ngram_min=4, ngram_max=None):
+def text_to_ngram_dict(text, ngram_min=4, ngram_max=None, exclude_quotes=True):
+    # Quotation marks are edited from raw and may affect matches.
+    if exclude_quotes:
+        text = text.replace('"', '')
     if ngram_max is None:
         ngram_max = len(text.split())
     ngram_list = make_ngrams(text, ngram_min, ngram_max)
