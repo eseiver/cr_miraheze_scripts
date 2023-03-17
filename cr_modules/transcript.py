@@ -7,7 +7,7 @@ from nltk import everygrams
 from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound
 from youtube_transcript_api.formatters import TextFormatter
 
-from cr import wikify_html_string, SPEAKER_TAGS
+from .cr import wikify_html_string, SPEAKER_TAGS
 
 def make_ngrams(text, ngram_min=2, ngram_max=4):
     '''for words in a string'''
