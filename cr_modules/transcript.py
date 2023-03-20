@@ -81,16 +81,18 @@ transcript_list = YouTubeTranscriptApi.list_transcripts(self.yt.yt_id,
 
 
 class Transcript:
-    def __init__(self, ep, yt, ext='txt', write_ts_file=False, **kwargs):
+    def __init__(self, ep, yt, ext='txt', write_ts_file=False, ignore_duplicates=False,
+                 try_local_file=True, preserve_formatting=True, force_redownload=False,
+                 **kwargs):
         self.ep = ep
         self.yt = yt
         self.ext = ext
         self.filename = f"{self.ep.code}.{self.ext}"
         self.write_ts_file = write_ts_file
-        self.force_redownload = False
-        self.try_local_file = True
-        self.ignore_duplicates = False
-        self.preserve_formatting = True
+        self.force_redownload = force_redownload
+        self.try_local_file = try_local_file
+        self.ignore_duplicates = ignore_duplicates
+        self.preserve_formatting = preserve_formatting
 
     def download_and_build_transcript(self):
         # check for local file first
