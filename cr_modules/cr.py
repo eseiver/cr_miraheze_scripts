@@ -55,10 +55,11 @@ ACTORS = [
     'Dani Carr',
     'Erika Ishii',
     'Robbie Daymond',
+    'Christian Navarro',
 ]
 SPEAKER_TAGS = [
     'ASHLEY', 'LAURA', 'LIAM', 'MARISHA', 'MATT', 'SAM', 'TALIESIN', 'TRAVIS',
-    'ALL', 'AABRIA', 'BRENNAN', 'DANI', 'ERIKA', 'ROBBIE',
+    'ALL', 'AABRIA', 'BRENNAN', 'DANI', 'ERIKA', 'ROBBIE', 'CHRISTIAN',
 ]
 EPISODE_DECODER = {
     '3': ('Campaign 3', 'List of Campaign 3 episodes',
