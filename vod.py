@@ -547,7 +547,7 @@ class EpListBot(EpisodeBot):
             prev_ep = prev_ep.get_previous_episode(prev_ep.code)
 
         # create new table entry from scratch if it doesn't exist yet, inserting after previous episode
-        if not re.search(fr'\|\s*ep\s*=\s*{{{{(E|e)p\|{ep.code}}}}}', text):
+        if not re.search(fr'\|\s*ep\s*=\s*{{{{(E|e)p\|(noshow=1\|)?{ep.code}}}}}', text):
             ep_entry = self.build_episode_entry()
             previous_entry_wiki = next((x for x in wikicode.filter_templates()
                 if x.name.matches('Episode table entry') and prev_ep.code in x['ep']), '')
@@ -1034,14 +1034,14 @@ def main(*args: str) -> None:
 
         if options.get('transcript'):
             if options['ep'].prefix in TRANSCRIPT_EXCLUSIONS:
-                pywikibot.output(f'Skipping transcript page creation for {options["ep"].show} episode')
+                pywikibot.output(f'\nSkipping transcript page creation for {options["ep"].show} episode')
             else:
                 bot5 = TranscriptBot(generator=gen, **options)
                 bot5.treat_page()
 
         if options.get('transcript_list'):
             if options['ep'].prefix in TRANSCRIPT_EXCLUSIONS:
-                pywikibot.output(f'Skipping transcript list update for {options["ep"].show} episode')
+                pywikibot.output(f'\nSkipping transcript list update for {options["ep"].show} episode')
             else:
                 bot6 = TranscriptListBot(generator=gen, **options)
                 bot6.treat_page()
