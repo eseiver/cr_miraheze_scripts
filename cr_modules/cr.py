@@ -195,6 +195,11 @@ class Ep:
         return wiki
 
     @property
+    def wiki_noshow(self):
+        wiki = f'{{{{ep|noshow=1|{self.code}}}}}'
+        return wiki
+
+    @property
     def ce_code(self):
         '''For creating the C[Campaign]E[Episode] formatted code. Used by CR.'''
         if self.prefix.isdigit():

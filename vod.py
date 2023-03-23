@@ -497,7 +497,7 @@ class EpListBot(EpisodeBot):
             host = ''
         if self.opt.ep.prefix == '4SD':
             color = '6f4889'
-            wiki_code = ep.wiki_code.replace('ep|', 'ep|noshow=1|')
+            wiki_code = ep.wiki_noshow
         else:
             color = ''
             wiki_code = ep.wiki_code
@@ -791,7 +791,7 @@ class Connect4SDBot(AirdateBot, EpArrayBot):
         wikicode = deepcopy(self.get_wikicode())
         infobox = self.get_infobox(wikicode=wikicode)
         if not infobox.has_param('4SD') or not does_value_exist(infobox, param_name='4SD'):
-            infobox.add('4SD', ep.wiki_code, showkey=None,
+            infobox.add('4SD', ep.wiki_noshow, showkey=None,
                          before='Podcast', preserve_spacing=True)
         self.put_current(str(wikicode), summary="Adding 4SD to infobox (via pywikibot)")
 
