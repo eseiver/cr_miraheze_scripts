@@ -1,3 +1,4 @@
+import json
 import re
 from collections import Counter
 from itertools import groupby
@@ -5,7 +6,7 @@ from itertools import groupby
 import pywikibot
 from nltk import everygrams
 from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound
-from youtube_transcript_api.formatters import TextFormatter
+from youtube_transcript_api.formatters import TextFormatter, JSONFormatter
 
 from .cr import wikify_html_string, SPEAKER_TAGS
 
@@ -174,8 +175,8 @@ class Transcript:
                  force_redownload=False, **kwargs):
         self.ep = ep
         self.yt = yt
-        self.ext = ext
-        self.filename = f"{self.ep.code}.{self.ext}"
+        self.text_filename = f"{self.ep.code}.txt"
+        self.json_filename = f"{self.ep.code}.json"
         self.write_ts_file = write_ts_file
         self.force_redownload = force_redownload
         self.try_local_file = try_local_file
@@ -187,23 +188,36 @@ class Transcript:
         # check for local file first
         if self.try_local_file:
             try:
-                self._raw_captions = self.create_from_txt_file()
+                self._captions = self.create_from_json_file()
             except FileNotFoundError:
                 pass
-        # only download from YouTube if raw_captions not already present
-        if not hasattr(self, '_raw_captions') or self.force_redownload is True:
-            self._raw_captions = self.captions_download()
-        self.transcript = self.process_transcript(captions=self._raw_captions)
 
-    def create_from_txt_file(self):
-        with open(self.filename) as f:
-            raw_captions = ''.join(f.readlines())
-        return raw_captions
+        if not hasattr(self, '_captions') or self.force_redownload is True:
+            self._captions = self.captions_download()
+        self.transcript = self.process_transcript(captions=self._captions)
+
+    def create_from_json_file(self):
+        with open(self.json_filename) as f:
+            captions = json.load(f)
+        return captions
+
+    def save_to_json_file(self, captions=None):
+        if captions is None:
+            captions = self._captions
+        formatter = JSONFormatter()
+
+        # .format_transcript(transcript) turns the transcript into a JSON string.
+        json_formatted = formatter.format_transcript(captions)
+
+        # Now we can write it out to a file.
+        with open(self.json_filename, 'w', encoding='utf-8') as json_file:
+            json_file.write(json_formatted)
 
     def captions_download(self):
-        captions = ''
+        captions = {}
         transcript_list = YouTubeTranscriptApi.list_transcripts(self.yt.yt_id)
         transcript = None
+
         try:
             transcript = transcript_list.find_manually_created_transcript(['en'])
             self.manual = True
@@ -214,19 +228,13 @@ class Transcript:
             except NoTranscriptFound:
                 pywikibot.output(f'Youtube video for {self.ep.code} does not have any English captions')
         if transcript:
-            ts_dict = transcript.fetch()
-
-            formatter = TextFormatter()
-            captions = formatter.format_transcript(ts_dict)
-
-        # Now we can write it out to a file.
-        if self.write_ts_file:
-            with open(f"{self.filename}", "w") as f:
-                f.write(captions)
+            captions = transcript.fetch()
+            if self.write_ts_file:
+                self.save_to_json_file(captions=captions)
 
         return captions
 
-    def process_captions(self, captions):
+    def process_captions(self, captions=None):
         '''Combine raw captions across line breaks to create transcript.'''
         fixed_lines = ['== Pre-show ==']
         line_in_progress = ''
@@ -234,7 +242,13 @@ class Transcript:
         during_intro = False
         intro_done = False
 
-        for line in captions.splitlines():
+        if captions is None:
+            captions = self._captions
+
+        formatter = TextFormatter()
+        captions = formatter.format_transcript(captions)
+
+        for i, line in enumerate(captions.splitlines()):
 
             # ignore blank lines
             if not line.strip():
@@ -372,11 +386,11 @@ class Transcript:
         return ts
 
     def process_transcript(self, captions):
-        # Step 1: remove and replace html markup
-        captions = wikify_html_string(captions)
-
-        # Step 2: Combine lines and remove extraneous quotation marks
+        # Step 1: Combine lines and remove extraneous quotation marks
         ts = self.process_captions(captions)
+        
+        # Step 2: remove and replace html markup
+        ts = wikify_html_string(ts)
 
         # Step 3: Flag repeated phrases in-line
         if not self.ignore_duplicates:
@@ -394,7 +408,7 @@ class Transcript:
                       '\n[[Category:Transcripts with duplicate lines]]'])
 
         if self.write_ts_file:
-            with open(f'{self.ep.code}_fixed.{self.ext}', 'w') as f:
+            with open(self.text_filename, 'w') as f:
                 f.write(ts)
 
         # autogenerated captions require different processing (TBD)
