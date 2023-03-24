@@ -79,11 +79,99 @@ youtube_transcript_api._transcripts._TranscriptParser = _TranscriptParserNew
 transcript_list = YouTubeTranscriptApi.list_transcripts(self.yt.yt_id,
                                                                 preserve_formatting=self.preserve_formatting)'''
 
+BREAK_PHRASES = [
+    'our break', "we'll take a break", 'go to break',
+    "we're going to break", 'after the break', "we're going to take a break",
+    'after we take a break', "take an early break", "from our break",
+    'back here in a few minutes', 'back in a few minutes', 'see you here in a few minutes',
+    'see you in a few minutes',
+]
+DURING_BREAK_PHRASES = [
+    'Hey Critters! Laura Bailey here', 'open your heart to chaos', 'Hi Critters, Sam Riegel here',
+]
+
+
+def break_criteria_1(line, break_taken=False, during_break=False):
+    '''Matt says they're taking a break'''
+    if (not break_taken and not during_break and
+        line.startswith('MATT:') and
+        any([x in line.lower() for x in BREAK_PHRASES
+            ])):
+        return True
+    else:
+        return False
+
+
+def break_criteria_2(line, break_taken=False, during_break=False):
+    '''One of the speaker names appears capitalized'''
+    if (not break_taken and not during_break and
+        any([''.join([x.capitalize(), ':']) in line for x in SPEAKER_TAGS
+            ])):
+        return True
+    else:
+        return False
+SPEAKER_TAGS
+
+
+def break_criteria_3(line, break_taken=False, during_break=False):
+    if (not break_taken and not during_break and
+        any([x in line.lower() for x in DURING_BREAK_PHRASES
+            ])):
+        return True
+    else:
+        return False
+
+
+@dataclass
+class Breakfinder:
+    '''Take a compiled transcript and comment out the break section.'''
+    transcript: str = ''
+    break_found: bool = False
+
+    def __post_init__(self):
+        self.revised_transcript = self.find_break()
+        if not self.break_found:
+            self.revised_transcript = self.find_break(break_function=break_criteria_2)
+        if not self.break_found:
+            self.revised_transcript = self.find_break(break_function=break_criteria_3)
+        if (self.revised_transcript == self.transcript or
+            'BREAK ENDS' not in self.revised_transcript):
+            raise
+
+    def find_break(self, break_function=None):
+        if self.break_found:
+            return self.transcript
+
+        if break_function is None:
+            break_function = break_criteria_1
+
+        break_taken = False
+        during_break = False
+        lines = self.transcript.splitlines()
+        for line in lines:
+            if break_function(line, break_taken, during_break):
+                during_break = True
+                old_first_line = line
+                new_first_line = old_first_line + '\n\n<!-- BREAK BEGINS\n'
+                self.break_found = True
+                continue
+            elif (during_break and line.startswith('MATT:')
+                  and 'welcome back' in line.lower()):
+                during_break = False
+                break_taken = True
+                old_last_line = line
+                new_last_line = 'BREAK ENDS -->\n\n== Part II ==\n' + old_last_line
+                break
+        revised_transcript = (self.transcript
+                              .replace(old_first_line, new_first_line)
+                              .replace(old_last_line, new_last_line))
+        return revised_transcript
+
 
 class Transcript:
     def __init__(self, ep, yt, ext='txt', write_ts_file=False, ignore_duplicates=False,
-                 try_local_file=True, preserve_formatting=True, force_redownload=False,
-                 **kwargs):
+                 ignore_break=False, try_local_file=True, preserve_formatting=True,
+                 force_redownload=False, **kwargs):
         self.ep = ep
         self.yt = yt
         self.ext = ext
@@ -91,6 +179,7 @@ class Transcript:
         self.write_ts_file = write_ts_file
         self.force_redownload = force_redownload
         self.try_local_file = try_local_file
+        self.ignore_break = ignore_break
         self.ignore_duplicates = ignore_duplicates
         self.preserve_formatting = preserve_formatting
 
@@ -144,8 +233,6 @@ class Transcript:
         active_quote = False
         during_intro = False
         intro_done = False
-        during_break = False
-        break_taken = False
 
         for line in captions.splitlines():
 
@@ -164,26 +251,6 @@ class Transcript:
                 continue
             elif during_intro:
                 continue
-
-            # ignore the content of the break
-            if (not break_taken and not during_break and (line.startswith('MATT:') or line_in_progress.startswith('MATT:'))
-                and any([x in line.lower() for x in [
-                'take our break', "we'll take a break", 'go to break', 'after our break',
-                "we're going to break", 'after the break', "we're going to take a break",
-                'after we take a break', "take an early break",
-            ]])):
-                during_break = True
-                line += '\n\n<!-- BREAK BEGINS '
-            elif (during_break and (line.startswith('MATT:') or line_in_progress.startswith('MATT:'))
-                and 'welcome back' in line.lower()):
-                during_break = False
-                break_taken = True
-                # if line_in_progress:
-                #     line_in_progress = 'BREAK ENDS -->\n\n== Part II ==\n\n' + line_in_progress
-                # else:
-                line_in_progress += 'BREAK ENDS -->\n\n== Part II ==\n'
-            elif during_break:
-                pass
 
             # if ongoing quote, the first '"' can be ignored
             if active_quote and line.startswith('"'):
