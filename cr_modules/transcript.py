@@ -1,36 +1,13 @@
 import json
 import re
-from collections import Counter
-from itertools import groupby
+from dataclasses import dataclass, field
 
 import pywikibot
-from nltk import everygrams
 from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound
-from youtube_transcript_api.formatters import TextFormatter, JSONFormatter
+from youtube_transcript_api.formatters import JSONFormatter
 
 from .cr import wikify_html_string, SPEAKER_TAGS
 
-def make_ngrams(text, ngram_min=2, ngram_max=4):
-    '''for words in a string'''
-    return list(everygrams(text.split(), ngram_min, ngram_max))
-
-
-def sort_ngram_list(ngram_list):
-    keyfunc = lambda x:len(x)
-    data = sorted(ngram_list, key=keyfunc)
-    ngram_dict = {k:list(g) for k, g in groupby(data,keyfunc)}
-    return ngram_dict
-
-
-def text_to_ngram_dict(text, ngram_min=4, ngram_max=None, exclude_quotes=True):
-    # Quotation marks are edited from raw and may affect matches.
-    if exclude_quotes:
-        text = text.replace('"', '')
-    if ngram_max is None:
-        ngram_max = len(text.split())
-    ngram_list = make_ngrams(text, ngram_min, ngram_max)
-    ngram_dict = sort_ngram_list(ngram_list)
-    return ngram_dict
 
 '''Below is a temporary solution to the problem documented here: https://github.com/jdepoix/youtube-transcript-api/pull/192
 If/when this change goes live, the content from here to the next comment marker should be deleted.'''
@@ -78,7 +55,7 @@ import youtube_transcript_api
 youtube_transcript_api._transcripts._TranscriptParser = _TranscriptParserNew
 '''End deletion HERE. After deleting, update the function in Transcript to read:
 transcript_list = YouTubeTranscriptApi.list_transcripts(self.yt.yt_id,
-                                                                preserve_formatting=self.preserve_formatting)'''
+                                                        preserve_formatting=self.preserve_formatting)'''
 
 BREAK_PHRASES = [
     'our break', "we'll take a break", 'go to break',
@@ -135,9 +112,8 @@ class Breakfinder:
             self.revised_transcript = self.find_break(break_function=break_criteria_2)
         if not self.break_found:
             self.revised_transcript = self.find_break(break_function=break_criteria_3)
-        if (self.revised_transcript == self.transcript or
-            'BREAK ENDS' not in self.revised_transcript):
-            raise
+        assert (self.revised_transcript == self.transcript or
+            'BREAK ENDS' not in self.revised_transcript), 'End of break not detected'
 
     def find_break(self, break_function=None):
         if self.break_found:
@@ -170,7 +146,7 @@ class Breakfinder:
 
 
 class Transcript:
-    def __init__(self, ep, yt, ext='txt', write_ts_file=False, ignore_duplicates=False,
+    def __init__(self, ep, yt, write_ts_file=False, ignore_duplicates=False,
                  ignore_break=False, try_local_file=True, preserve_formatting=True,
                  force_redownload=False, **kwargs):
         self.ep = ep
@@ -183,6 +159,7 @@ class Transcript:
         self.ignore_break = ignore_break
         self.ignore_duplicates = ignore_duplicates
         self.preserve_formatting = preserve_formatting
+        self.dupe_lines = []
 
     def download_and_build_transcript(self):
         # check for local file first
@@ -205,8 +182,6 @@ class Transcript:
         if captions is None:
             captions = self._captions
         formatter = JSONFormatter()
-
-        # .format_transcript(transcript) turns the transcript into a JSON string.
         json_formatted = formatter.format_transcript(captions)
 
         # Now we can write it out to a file.
@@ -245,14 +220,38 @@ class Transcript:
         if captions is None:
             captions = self._captions
 
-        formatter = TextFormatter()
-        captions = formatter.format_transcript(captions)
+        # split captions along linebreaks if a new speaker
+        caption_lines = []
+        for i, line in enumerate(captions):
+            lines = [x.strip() for x in line['text'].split('\n')]
+            if not re.match('^([A-Z]{2}|\()', lines[-1]):
+                lines = [line['text'].replace('\n', ' ')]
+            for l in lines:
+                line_and_starttime = (l, int(line['start']))
+                caption_lines.append(line_and_starttime)
 
-        for i, line in enumerate(captions.splitlines()):
-
+        # hide duplicate lines with wiki comments
+        preprocessed_lines = []
+        for i, (line, starttime) in enumerate(caption_lines):
+            dupe = False
             # ignore blank lines
             if not line.strip():
                 continue
+            if line == caption_lines[i-1][0] and not re.match('^\(', line):
+                dupe = True
+            elif not re.match('^\(', line):
+                text1 = [x for x in line if x.isalpha()]
+                text2 = [x for x in caption_lines[i-1][0] if x.isalpha()]
+                if text1 == text2 and len(text1) > 10:
+                    dupe = True
+            if dupe:
+                dupe_starttime = caption_lines[i-1][1]
+                line = '<!-- DUPLICATE ' + line + '-->'
+                self.dupe_lines.append((line, dupe_starttime))
+            preprocessed_lines.append(line)
+
+        # combine across all lines into single txt file
+        for i, line in enumerate(preprocessed_lines):
 
             # ignore the intro song (with predictable beginning and end), add Part I header
             if "♪ Critical (It's Thursday)" in line and not during_intro and not intro_done:
@@ -261,7 +260,7 @@ class Transcript:
             elif during_intro and any([x in line.lower() for x in ['(flames', 'welcome back']]):
                 during_intro = False
                 intro_done = True
-                line_in_progress += '\n\n== Part I ==\n\n'
+                line_in_progress += '\n\n== Part I ==\n'
                 continue
             elif during_intro:
                 continue
@@ -270,30 +269,49 @@ class Transcript:
             if active_quote and line.startswith('"'):
                 line = line[1:]
 
-            # handle quotation marks
-            if not active_quote and line.count('"') % 2 != 0:
+            # handle quotation marks, excluding comments
+            quote_count = re.sub('<\!--.*?-->', '', line).count('"')
+            if not active_quote and quote_count % 2 != 0:
                 active_quote = True
+
+            # flag potential missing colon
+            if any([x in line for x in SPEAKER_TAGS]) and ':' not in line:
+                line = '<!-- potential missing speaker tag -->' + line
 
             # this indicates a person is speaking (and thus a new line begins)
             if re.search('^[A-Z].*?[A-Z]:', line):
                 if line_in_progress:
                     fixed_lines.append(line_in_progress)
                 line_in_progress = line
+                current_speaker = re.search('^[A-Z].*?[A-Z]:', line)
 
             # these are non-dialogue descriptions that get their own lines (if not in middle of quote)
-            elif line.startswith('(') and not line_in_progress and not active_quote:
-                fixed_lines.append(line_in_progress)
-                line_in_progress = ''
-                fixed_lines.append(line)
+            elif re.match('^\(.*?\)$', line.strip()) and not active_quote:
+                if i+1 >= len(preprocessed_lines):
+                    fixed_lines.append(line)
+                    continue
+                prev_line = preprocessed_lines[i-1] if i != 0 else ''
+                next_line = preprocessed_lines[i+1] if len(preprocessed_lines) > i else ''
+                if bool(re.search('^[A-Z].*?[A-Z]:', next_line) and not re.search(':$', prev_line)):
+                    fixed_lines.append(line_in_progress)
+                    line_in_progress = ''
+                    fixed_lines.append(line)
+                else:
+                    line_in_progress = ' '.join([line_in_progress.strip(), line.strip()]).strip()
+                    quote_count = re.sub('<\!--.*?-->', '', line_in_progress).count('"')
+                    if quote_count % 2 == 0:
+                        active_quote = False
 
-            # this is a continuation of the previous line. If quotation marks are even, the active quote is done.
+            # continuation of previous line; if quotation marks are even, active quote is done
             elif line_in_progress:
                 line_in_progress = ' '.join([line_in_progress.strip(), line.strip()]).strip()
-                if line_in_progress.count('"') % 2 == 0:
+                quote_count = re.sub('<\!--.*?-->', '', line_in_progress).count('"')
+                if quote_count % 2 == 0:
                     active_quote = False
 
             else:
                 pass
+
         # add last line
         fixed_lines.append(line_in_progress)
 
@@ -306,6 +324,7 @@ class Transcript:
                 .replace("‘", "'")
                 .replace("’", "'")
                 )
+
         return transcript
 
     def check_ts_names(self, transcript):
@@ -329,48 +348,6 @@ class Transcript:
 
         return error_warning
 
-    def flag_duplicates(self, transcript):
-        during_break = False
-        for line in transcript.splitlines():
-            # don't worry about music
-            if '♪' in line:
-                continue
-
-            # ignore lines during breaks
-            if 'BREAK BEGINS' in line:
-                during_break = True
-            if 'BREAK ENDS' in line:
-                during_break = False
-                continue
-            elif during_break:
-                continue
-
-            ngram_dict = text_to_ngram_dict(line)
-
-            duplicate_ngrams = {k: [x for x in v if Counter(v)[x] > 1] for k,v in reversed(ngram_dict.items())
-                                if len(set(v)) != len(v)}
-            longest_ngrams = []
-            dupe_ngrams = [ngram for v in duplicate_ngrams.values() for ngram in set(v)]
-            for ngram in dupe_ngrams:
-                if not any([set(ngram).issubset(x) for x in longest_ngrams]):
-                    longest_ngrams.append(ngram)
-
-            new_line = line
-            for ngram in longest_ngrams:
-                repeated_sentence = ' '.join(ngram)
-                first_idx = new_line.find(repeated_sentence)
-                second_idx = new_line.rfind(repeated_sentence)
-                distance_between_lines = second_idx-(first_idx+len(repeated_sentence))
-                if (-1 < distance_between_lines < 3 and line.count(repeated_sentence) == 2
-                    and (repeated_sentence[0].islower() or 
-                         repeated_sentence[-1] not in ['!', '?', '.'])):
-                    new_line = f'{repeated_sentence}<!-- potential duplicate -->'.join(new_line.rsplit(repeated_sentence, 1))
-                else:
-                    new_line = f'{repeated_sentence}<!-- should not be a duplicate -->'.join(new_line.rsplit(repeated_sentence, 1))
-            if new_line != line:
-                transcript = transcript.replace(line, new_line)
-        return transcript
-
     def process_errors(self, ts):
         '''Can add more processes later if needed.'''
         errors_comments = ''
@@ -386,15 +363,15 @@ class Transcript:
         return ts
 
     def process_transcript(self, captions):
-        # Step 1: Combine lines and remove extraneous quotation marks
+        # Step 1: Combine lines, flag duplicates, remove extraneous quotation marks
         ts = self.process_captions(captions)
-        
+
         # Step 2: remove and replace html markup
         ts = wikify_html_string(ts)
 
-        # Step 3: Flag repeated phrases in-line
-        if not self.ignore_duplicates:
-            ts = self.flag_duplicates(ts)
+        # Step 3: Comment out the break
+        if not self.ignore_break:
+            ts = Breakfinder(transcript=ts).revised_transcript
 
         # Step 4: add commented_out error messages to top of transcript
         ts = self.process_errors(ts)
