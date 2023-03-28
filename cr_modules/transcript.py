@@ -66,6 +66,7 @@ BREAK_PHRASES = [
 ]
 DURING_BREAK_PHRASES = [
     'Hey Critters! Laura Bailey here', 'open your heart to chaos', 'Hi Critters, Sam Riegel here',
+    "Chop it off. Let's do it."
 ]
 
 
@@ -113,7 +114,7 @@ class Breakfinder:
         if not self.break_found:
             self.revised_transcript = self.find_break(break_function=break_criteria_3)
         assert (self.revised_transcript == self.transcript or
-            'BREAK ENDS' not in self.revised_transcript), 'End of break not detected'
+            'BREAK ENDS' in self.revised_transcript), 'End of break not detected'
 
     def find_break(self, break_function=None):
         if self.break_found:
@@ -125,7 +126,7 @@ class Breakfinder:
         break_taken = False
         during_break = False
         lines = self.transcript.splitlines()
-        for line in lines:
+        for i, line in enumerate(lines):
             if break_function(line, break_taken, during_break):
                 during_break = True
                 old_first_line = line
@@ -136,8 +137,9 @@ class Breakfinder:
                   and 'welcome back' in line.lower()):
                 during_break = False
                 break_taken = True
-                old_last_line = line
-                new_last_line = 'BREAK ENDS -->\n\n== Part II ==\n' + old_last_line
+                next_lines = '\n'.join(lines[i+1:i+5])   # avoids adding this twice
+                old_last_line = '\n'.join([line, next_lines])
+                new_last_line = 'BREAK ENDS -->\n\n== Part II ==\n\n' + old_last_line
                 break
         revised_transcript = (self.transcript
                               .replace(old_first_line, new_first_line)
@@ -260,7 +262,7 @@ class Transcript:
             elif during_intro and any([x in line.lower() for x in ['(flames', 'welcome back']]):
                 during_intro = False
                 intro_done = True
-                line_in_progress += '\n\n== Part I ==\n'
+                line_in_progress += '\n\n== Part I =='
                 continue
             elif during_intro:
                 continue
