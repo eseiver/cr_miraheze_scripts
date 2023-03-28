@@ -110,9 +110,10 @@ from pywikibot.bot import (
     SingleSiteBot,
     QuitKeyboardInterrupt,
 )
+from pywikibot.specialbots import UploadRobot
 from cr_modules.cr import *
 from cr_modules.transcript import Transcript
-from pywikibot.specialbots import UploadRobot
+
 
 
 class EpisodeBot(
@@ -641,6 +642,18 @@ class TranscriptListBot(EpisodeBot):
             text = text.replace(current_entry, ep_entry)
             self.put_current(text, summary=f"Updating entry for {ep.code} (via pywikibot)")
 
+class TranscriptRedirectBot(EpisodeBot):
+    '''Insures all viable Transcript:CxNN redirects exist and point at Transcript:new_page_name.'''
+    use_redirects: True
+
+    def treat_page(self):
+        ep = self.opt.ep
+        url = 'Transcript:' + self.opt.new_page_name
+        for code in ep.transcript_redirects:
+            self.current_page = pywikibot.Page(self.site, code)
+            text = f"#REDIRECT [[{url}]]"
+            self.put_current(text, summary="Updating/creating transcript redirects (via pywikibot)")
+
 
 class RedirectFixerBot(EpisodeBot):
     '''Insures all viable CxNN redirects exist and point at new_page_name.'''
@@ -1038,41 +1051,43 @@ def main(*args: str) -> None:
             else:
                 bot5 = TranscriptBot(generator=gen, **options)
                 bot5.treat_page()
+                bot6 = TranscriptRedirectBot(generator=gen, **options)
+                bot6.treat_page()
 
         if options.get('transcript_list'):
             if options['ep'].prefix in TRANSCRIPT_EXCLUSIONS:
                 pywikibot.output(f'\nSkipping transcript list update for {options["ep"].show} episode')
             else:
-                bot6 = TranscriptListBot(generator=gen, **options)
-                bot6.treat_page()
+                bot7 = TranscriptListBot(generator=gen, **options)
+                bot7.treat_page()
 
         if options.get('redirects'):
-            bot7 = RedirectFixerBot(generator=gen, **options)
-            bot7.treat_page()
+            bot8 = RedirectFixerBot(generator=gen, **options)
+            bot8.treat_page()
 
         if options.get('navbox'):
-            bot8 = NavboxBot(generator=gen, **options)
-            bot8.treat_page()
+            bot9 = NavboxBot(generator=gen, **options)
+            bot9.treat_page()
 
         if options.get('airdate_order'):
             if not options.get('airdate'):
                 airdate_string = pywikibot.input('Please enter episode airdate (YYYY-MM-DD)')
                 options['airdate'] = Airdate(airdate_string)
-            bot9 = AirdateBot(generator=gen, **options)
-            bot9.treat_page()
+            bot10 = AirdateBot(generator=gen, **options)
+            bot10.treat_page()
             options['airdate_dict'] = bot9.opt.airdate_dict
 
         if options['ep'].prefix == '4SD' and options.get('4SD'):
-            bot10 = Connect4SDBot(generator=gen, **options)
-            bot10.treat_page()
+            bot11 = Connect4SDBot(generator=gen, **options)
+            bot11.treat_page()
             if not options.get('array_dicts'):
                 options['array_dicts'] = bot10.opt.array_dicts
             if not options.get('airdate_dict'):
                 options['airdate_dict'] = bot10.opt.airdate_dict
 
         if options.get('main_page'):
-            bot11 = MainPageBot(generator=gen, **options)
-            bot11.treat_page()
+            bot12 = MainPageBot(generator=gen, **options)
+            bot12.treat_page()
 
 
 if __name__ == '__main__':

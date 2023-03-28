@@ -200,6 +200,11 @@ class Ep:
         return wiki
 
     @property
+    def transcript_redirects(self):
+        trs = [f'Transcript:{x}' for x in self.generate_equivalent_codes()]
+        return trs
+
+    @property
     def ce_code(self):
         '''For creating the C[Campaign]E[Episode] formatted code. Used by CR.'''
         if self.prefix.isdigit():
