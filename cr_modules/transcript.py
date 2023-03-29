@@ -249,7 +249,7 @@ class Transcript:
             if dupe:
                 dupe_starttime = caption_lines[i-1][1]
                 line = '<!-- DUPLICATE ' + line + '-->'
-                self.dupe_lines.append((line, dupe_starttime))
+                self.dupe_lines.append((wikify_html_string(line), dupe_starttime))
             preprocessed_lines.append(line)
 
         # combine across all lines into single txt file
@@ -262,7 +262,7 @@ class Transcript:
             elif during_intro and any([x in line.lower() for x in ['(flames', 'welcome back']]):
                 during_intro = False
                 intro_done = True
-                line_in_progress += '\n\n== Part I =='
+                line_in_progress += '\n\n== Part I ==\n'
                 continue
             elif during_intro:
                 continue
