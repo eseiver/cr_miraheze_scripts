@@ -162,6 +162,7 @@ class EpisodeBot(
         'ep_array': None,  # add to/update the ep array
         'transcript': None,  # create episode transcript page (auto-skips TRANSCRIPT_EXCLUSIONS)
         'transcript_list': None,  # add transcript page to list of transcripts (auto-skips TRANSCRIPT_EXCLUSIONS)
+        'ts': None, # Transcript object
         'redirects': None,  # add/update redirects from ep_id to new_page_name
         'navbox': None,  # add ep_id to the appropriate navbox template
         '4SD': None,  # add 4SD param to 3xNN pages (4SD only)
@@ -599,8 +600,7 @@ class TranscriptBot(EpisodeBot):
     def build_transcript(self):
         ts = Transcript(ep=self.opt.ep, yt=self.opt.yt)
         ts.download_and_build_transcript()
-        transcript = ts.transcript
-        return transcript
+        return ts
 
     def treat_page(self):
         url = 'Transcript:' + self.opt.new_page_name
@@ -608,8 +608,9 @@ class TranscriptBot(EpisodeBot):
         if self.current_page.exists() and self.current_page.text:
             pywikibot.output(f'Transcript page already exists for {self.opt.new_page_name}; transcript creation skipped')
         else:
-            transcript = self.build_transcript()
-            self.put_current(transcript, summary=f"Creating {self.opt.ep.code} transcript (via pywikibot)")
+            ts = self.build_transcript()
+            self.opt.ts = ts
+            self.put_current(ts.transcript, summary=f"Creating {self.opt.ep.code} transcript (via pywikibot)")
 
 
 class TranscriptListBot(EpisodeBot):
@@ -1051,6 +1052,8 @@ def main(*args: str) -> None:
             else:
                 bot5 = TranscriptBot(generator=gen, **options)
                 bot5.treat_page()
+                if bot5.opt.ts:
+                    options['ts'] = bot5.opt.ts
                 bot6 = TranscriptRedirectBot(generator=gen, **options)
                 bot6.treat_page()
 
