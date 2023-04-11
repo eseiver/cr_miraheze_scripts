@@ -262,6 +262,26 @@ class Ep:
             previous_episode = None
         return previous_episode
 
+    def get_next_episode(self):
+        '''Cannot calculate across seasons (e.g., what was after 2x141). Handles letters (valid letters regex-limited).'''
+        next_number = self.number + 1
+        letter = ''
+        if self.ends_in_letter and not self.code.endswith('a'):
+            next_number = self.number
+            suffix = self.code[-1]
+            look_up = dict(zip(ascii_lowercase, ascii_lowercase[1:]+'a'))
+            letter = next(k for k, v in look_up.items() if v == suffix)
+        if next_number > 0 and (not self.ends_in_letter or self.code.endswith('a')):
+            next_id = 'x'.join([self.prefix, f"{next_number:02}"])
+            next_episode = Ep(next_id)
+        elif next_number > 0:
+            next_id = 'x'.join([self.prefix, f"{next_number:02}"]) + letter
+            next_episode = Ep(next_id)
+        else:
+            # no previous id, because the first of its kind
+            next_episode = None
+        return next_episode
+
 
 class Actors:
     def __init__(self, input_names, **kwargs):
