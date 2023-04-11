@@ -113,7 +113,7 @@ from pywikibot.bot import (
 from pywikibot.specialbots import UploadRobot
 from cr_modules.cr import *
 from cr_modules.transcript import Transcript
-
+from dupes import DupeDetectionBot
 
 
 class EpisodeBot(
@@ -605,11 +605,11 @@ class TranscriptBot(EpisodeBot):
     def treat_page(self):
         url = 'Transcript:' + self.opt.new_page_name
         self.current_page = pywikibot.Page(self.site, url)
+        ts = self.build_transcript()
+        self.opt.ts = ts
         if self.current_page.exists() and self.current_page.text:
             pywikibot.output(f'Transcript page already exists for {self.opt.new_page_name}; transcript creation skipped')
         else:
-            ts = self.build_transcript()
-            self.opt.ts = ts
             self.put_current(ts.transcript, summary=f"Creating {self.opt.ep.code} transcript (via pywikibot)")
 
 
@@ -1046,24 +1046,6 @@ def main(*args: str) -> None:
                 tinybot.update_summary()
                 # TO DO: run teeny episodebot with one option for summary
 
-        if options.get('transcript'):
-            if options['ep'].prefix in TRANSCRIPT_EXCLUSIONS:
-                pywikibot.output(f'\nSkipping transcript page creation for {options["ep"].show} episode')
-            else:
-                bot5 = TranscriptBot(generator=gen, **options)
-                bot5.treat_page()
-                if bot5.opt.ts:
-                    options['ts'] = bot5.opt.ts
-                bot6 = TranscriptRedirectBot(generator=gen, **options)
-                bot6.treat_page()
-
-        if options.get('transcript_list'):
-            if options['ep'].prefix in TRANSCRIPT_EXCLUSIONS:
-                pywikibot.output(f'\nSkipping transcript list update for {options["ep"].show} episode')
-            else:
-                bot7 = TranscriptListBot(generator=gen, **options)
-                bot7.treat_page()
-
         if options.get('redirects'):
             bot8 = RedirectFixerBot(generator=gen, **options)
             bot8.treat_page()
@@ -1087,6 +1069,39 @@ def main(*args: str) -> None:
                 options['array_dicts'] = bot10.opt.array_dicts
             if not options.get('airdate_dict'):
                 options['airdate_dict'] = bot10.opt.airdate_dict
+
+        if options.get('transcript'):
+            if options['ep'].prefix in TRANSCRIPT_EXCLUSIONS:
+                pywikibot.output(f'\nSkipping transcript page creation for {options["ep"].show} episode')
+            else:
+                bot5 = TranscriptBot(generator=gen, **options)
+                bot5.treat_page()
+                if bot5.opt.ts:
+                    options['ts'] = bot5.opt.ts
+                bot6 = TranscriptRedirectBot(generator=gen, **options)
+                bot6.treat_page()
+
+        if options.get('ts'):
+            dupe_count = len(options['ts'].dupe_lines)
+            if dupe_count:
+                dupes = pywikibot.input_yn(f'Process {dupe_count} duplicate captions in transcript now?')
+            else:
+                dupes = False
+                pywikibot.output('No duplicates found in transcript to process.')
+            if dupes:
+                bot12 = DupeDetectionBot(generator=gen, **options)
+                bot12.current_page = pywikibot.Page(bot12.site, f"Transcript:{options['new_ep_name']}")
+                bot12.treat_page()
+            else:
+                command = f"\n<<yellow>>python pwb.py dupes -ep:{options['ep'].code} -yt:{options['yt'].yt_id}<<default>>"
+                pywikibot.output(f'Skipping ts duplicate processing. You can run this later:{command}')
+
+        if options.get('transcript_list'):
+            if options['ep'].prefix in TRANSCRIPT_EXCLUSIONS:
+                pywikibot.output(f'\nSkipping transcript list update for {options["ep"].show} episode')
+            else:
+                bot7 = TranscriptListBot(generator=gen, **options)
+                bot7.treat_page()
 
         if options.get('main_page'):
             bot12 = MainPageBot(generator=gen, **options)
