@@ -48,3 +48,4 @@ where SCRIPTNAME is something like `vod`.
 | ------------------------| ----------------------------------------------------------------- |
 | [vod.py](vod.py)        | Update relevant wiki pages when a new VOD is released on YouTube. |
 | [podcast.py](podcast.py)| Update ```Module:Ep/PodcastSwitcher/URLs``` when a podcast is released.|
+| [dupes.py](dupes.py)    | Interactively remove transcript duplicate lines. Also in `vod.py`.|
