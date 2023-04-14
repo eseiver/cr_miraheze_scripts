@@ -673,23 +673,90 @@ class RedirectFixerBot(EpisodeBot):
             self.put_current(text, summary="Updating/creating episode redirects (via pywikibot)")
 
 
+def get_navbox(navbox_text):
+    if isinstance(navbox_text, mwparserfromhell.wikicode.Wikicode):
+        navbox_wikicode = navbox_text
+    else:
+        assert isinstance(navbox_text, str)
+        navbox_wikicode = mwparserfromhell.parse(navbox_text)
+    navbox = next((x for x in navbox_wikicode.filter_templates() if x.name.matches('Navbox')), None)
+    return navbox
+
+
+def get_navbox_pairs(template):
+    '''for parsing navbox list names and members, such as group1 and list1.'''
+    if isinstance(template, mwparserfromhell.wikicode.Template):
+        navbox_pairs = {
+            template.get(f"group{n}").value.lower().strip()
+            if template.has_param(f"group{n}") else str(n):
+            template[f"list{n}"].value
+            for n in range(1, len(template.params))
+            if template.has_param(f"list{n}")
+        }
+    else:
+        navbox_pairs = {}
+    return navbox_pairs
+
+
+def make_navbox_dict(navbox):
+    '''recursively implements get_navbox_pairs() for sublists.'''
+    navbox_pairs = get_navbox_pairs(navbox)
+    result = {}
+    for k, v in navbox_pairs.items():
+        navbox_child = next((x for x in v.filter_templates() 
+                             if x.name.matches('Navbox') and x.get(1) and x[1].value.matches('child')),
+                           None)
+        if navbox_child:
+            output = {'|'.join([k, key]): value for key, value in make_navbox_dict(navbox_child).items()}
+        else:
+            output = {k: v}
+        result.update(output)
+    return result
+
+
+def select_navbox_list(navbox, item='this item'):
+    navbox_dict = make_navbox_dict(navbox)
+    if not all([x.isdigit() for x in navbox_dict.keys()]):
+        choices = [(str(i+1), k) for i, k in enumerate(navbox_dict.keys())]
+        list_name = pywikibot.input_choice(f'Which list does {item} belong in?', choices)
+        pywikibot.output(f'adding to {list_name}')
+        list_members = navbox_dict[list_name]
+    else:
+        # just get the last list in the dict
+        list_members = list(navbox_dict.items())[-1][1]
+    return list_members
+
+
+def get_last_item(wikicode, name='ep'):
+    if isinstance(wikicode, mwparserfromhell.wikicode.Wikicode):
+        last_item = next((x for x in reversed(wikicode.filter_templates()) if x.name.matches(name)), None)
+        return last_item
+
+
+def add_to_wiki_list(new_item, wikicode, name='ep'):
+    last_item = get_last_item(wikicode, name=name)
+    if last_item:
+        wikicode.insert_after(last_item, f' • {new_item}')
+        return wikicode
+
+
 class NavboxBot(EpisodeBot):
     '''Makes sure the episode code appears on the accompanying navbox'''
 
     def treat_page(self):
-        ep = self.opt.ep
-        prev_ep = ep.get_previous_episode()
-        navbox_name = ep.navbox_name
+        navbox_name = self.opt.ep.navbox_name
+        wiki_ep = self.opt.ep.wiki_code
+
         self.current_page = pywikibot.Page(self.site, navbox_name)
-        wikicode = deepcopy(self.get_wikicode())
-        if ep.code not in str(wikicode):
-            navbox = next(x for x in wikicode.filter_templates() if x.name.matches('Navbox'))
-            ep_list = next(p for p in navbox.params if prev_ep.code in p)
-            if prev_ep.wiki_code in ep_list:
-                ep_list.value.replace(prev_ep.wiki_code, f'{prev_ep.wiki_code} • {ep.wiki_code}')
-            elif prev_ep.code in ep_list:
-                ep_list.value.replace(prev_ep.code, f'{prev_ep.code} • {ep.code}')
-        self.put_current(str(wikicode), summary=f"Adding {ep.code} to navbox (via pywikibot)")
+        wikicode = self.get_wikicode()
+        navbox = get_navbox(wikicode)
+        navbox_list = select_navbox_list(navbox, item = self.display_ep)
+        add_to_wiki_list(wiki_ep, navbox_list)
+
+        self.put_current(
+            str(wikicode),
+            summary=f"Adding {self.opt.ep.code} to navbox (via pywikibot)"
+        )
 
 
 class AirdateBot(EpisodeBot):
