@@ -168,6 +168,11 @@ class EpisodeBot(
         '4SD': None,  # add 4SD param to 3xNN pages (4SD only)
     }
 
+    @property
+    def display_ep(self):
+        display = f'"{self.opt.new_ep_name}" ({self.opt.ep.code})'
+        return display
+
     def get_wikicode(self):
         text = self.current_page.text
         wikicode = mwparserfromhell.parse(text)
@@ -299,7 +304,7 @@ class EpisodeBot(
             self.opt.airtime = ""
 
         # if image field is already filled in beyond comments, cancel thumbnail procedure
-        if does_value_exist(infobox, param_name='Image'):
+        if does_value_exist(infobox, param_name='Image') and self.opt.upload:
             pywikibot.output(f"Value '{(remove_comments(infobox['Image'].value)).strip()}' in image field detected; thumbnail will not be uploaded")
             self.opt.upload = False
         elif self.opt.image_name:
@@ -987,6 +992,7 @@ def main(*args: str) -> None:
             color = 'yellow'
             pywikibot.output(f'Please use <<{color}>>-page:"{page.getRedirectTarget().title()}"<<default>> and try again.' + '\n')
             return None
+        pywikibot.output(f"Now updating wiki for {bot1.display_ep}")
         bot1.run()
 
         # get the airdate info & new page name from episode page processing & moving
