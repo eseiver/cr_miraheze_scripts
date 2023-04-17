@@ -8,55 +8,6 @@ from youtube_transcript_api.formatters import JSONFormatter
 
 from .cr import wikify_html_string, SPEAKER_TAGS
 
-
-'''Below is a temporary solution to the problem documented here: https://github.com/jdepoix/youtube-transcript-api/pull/192
-If/when this change goes live, the content from here to the next comment marker should be deleted.'''
-
-TEXT_FORMATS = [
-    'strong',  # important
-    'em',  # emphasized
-    'b',  # bold
-    'i',  # italic
-    'mark',  # marked
-    'small',  # smaller
-    'del',  # deleted
-    'ins',  # inserted
-    'sub',  # subscript
-    'sup',  # superscript
-]
-from html import unescape
-from xml.etree import ElementTree
-
-class _TranscriptParserNew(object):
-    def __init__(self, preserve_formatting=True):
-        self.preserve_formatting = preserve_formatting
-
-    @property
-    def html_regex(self):
-        if self.preserve_formatting:
-            formats_regex = '|'.join(TEXT_FORMATS)
-            formats_regex = r'<\/?(?!\/?(' + formats_regex + r')\b).*?\b>'
-            html_regex = re.compile(formats_regex, re.IGNORECASE)
-        else:
-            html_regex = re.compile(r'<[^>]*>', re.IGNORECASE)
-        return html_regex
-
-    def parse(self, plain_data):
-        return [
-            {
-                'text': re.sub(self.html_regex, '', unescape(xml_element.text)),
-                'start': float(xml_element.attrib['start']),
-                'duration': float(xml_element.attrib.get('dur', '0.0')),
-            }
-            for xml_element in ElementTree.fromstring(plain_data)
-            if xml_element.text is not None
-        ]
-import youtube_transcript_api
-youtube_transcript_api._transcripts._TranscriptParser = _TranscriptParserNew
-'''End deletion HERE. After deleting, update the function in Transcript to read:
-transcript_list = YouTubeTranscriptApi.list_transcripts(self.yt.yt_id,
-                                                        preserve_formatting=self.preserve_formatting)'''
-
 BREAK_PHRASES = [
     'our break', "we'll take a break", 'go to break',
     "we're going to break", 'after the break', "we're going to take a break",
@@ -205,7 +156,7 @@ class Transcript:
             except NoTranscriptFound:
                 pywikibot.output(f'Youtube video for {self.ep.code} does not have any English captions')
         if transcript:
-            captions = transcript.fetch()
+            captions = transcript.fetch(preserve_formatting=True)
             if self.write_ts_file:
                 self.save_to_json_file(captions=captions)
 
