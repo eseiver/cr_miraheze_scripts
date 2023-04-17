@@ -749,9 +749,10 @@ class NavboxBot(EpisodeBot):
 
         self.current_page = pywikibot.Page(self.site, navbox_name)
         wikicode = self.get_wikicode()
-        navbox = get_navbox(wikicode)
-        navbox_list = select_navbox_list(navbox, item = self.display_ep)
-        add_to_wiki_list(wiki_ep, navbox_list)
+        if wiki_ep not in str(wikicode):
+            navbox = get_navbox(wikicode)
+            navbox_list = select_navbox_list(navbox, item = self.display_ep)
+            add_to_wiki_list(wiki_ep, navbox_list)
 
         self.put_current(
             str(wikicode),
