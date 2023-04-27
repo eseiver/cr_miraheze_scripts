@@ -120,7 +120,6 @@ class PodcastBot(SingleSiteBot, ExistingPageBot):
             existing_url = ''
         return existing_url
 
-
     def treat_page(self):
         text = self.opt.text
         ep = self.opt.ep
@@ -196,12 +195,16 @@ def main(*args: str) -> None:
 
     # if not campaign, give multiple choice between posts
     if posts and not bot.opt.get('url'):
-        choices = [(ascii_uppercase[i], x.title) for i, x in enumerate(posts)]
+        choices = ([(ascii_uppercase[i], x.title) for i, x in enumerate(posts)] +
+                   [(ascii_uppercase[len(posts)], "None of these match, I'll enter it")])
         choice = pywikibot.input_choice(
             '\n<<yellow>>Does one of these titles match? Enter letter:<<default>>',
             choices,
             return_shortcut=False)
-        bot.opt['url'] = posts[choice].link
+        if choice == len(posts):
+            bot.opt['url'] = pywikibot.input("Please enter podcast URL")
+        else:
+            bot.opt['url'] = posts[choice].link
 
     if bot.opt.get('url'):
         bot.treat_page()
