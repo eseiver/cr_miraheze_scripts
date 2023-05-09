@@ -11,13 +11,13 @@ from .cr import wikify_html_string, SPEAKER_TAGS
 BREAK_PHRASES = [
     'our break', "we'll take a break", 'go to break',
     "we're going to break", 'after the break', "we're going to take a break",
-    'after we take a break', "take an early break", "from our break",
+    'after we take a break', "take an early break", 'go ahead and take a break',
     'back here in a few minutes', 'back in a few minutes', 'see you here in a few minutes',
     'see you in a few minutes',
 ]
 DURING_BREAK_PHRASES = [
-    'Hey Critters! Laura Bailey here', 'open your heart to chaos', 'Hi Critters, Sam Riegel here',
-    "Chop it off. Let's do it."
+    'hey critters! laura bailey here', 'open your heart to chaos', 'hi critters, sam riegel here',
+    "chop it off. let's do it.", '(gale laughing) later, chudruckers!'
 ]
 
 
@@ -76,6 +76,11 @@ class Breakfinder:
 
         break_taken = False
         during_break = False
+        old_first_line = ''
+        old_last_line = ''
+        new_first_line = ''
+        new_last_line = ''
+        revised_transcript = self.transcript
         lines = self.transcript.splitlines()
         for i, line in enumerate(lines):
             if break_function(line, break_taken, during_break):
@@ -92,9 +97,12 @@ class Breakfinder:
                 old_last_line = '\n'.join([line, next_lines])
                 new_last_line = 'BREAK ENDS -->\n\n== Part II ==\n\n' + old_last_line
                 break
-        revised_transcript = (self.transcript
-                              .replace(old_first_line, new_first_line)
-                              .replace(old_last_line, new_last_line))
+        if old_first_line and new_first_line:
+            revised_transcript = (revised_transcript
+                                  .replace(old_first_line, new_first_line))
+        if old_last_line and new_last_line:
+            revised_transcript = (revised_transcript
+                                  .replace(old_last_line, new_last_line))
         return revised_transcript
 
 
