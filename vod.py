@@ -1184,39 +1184,39 @@ def main(*args: str) -> None:
                 # TO DO: run teeny episodebot with one option for summary
 
         if options.get('redirects'):
-            bot8 = RedirectFixerBot(generator=gen, **options)
-            bot8.treat_page()
+            bot5 = RedirectFixerBot(generator=gen, **options)
+            bot5.treat_page()
 
         if options.get('navbox'):
-            bot9 = NavboxBot(generator=gen, **options)
-            bot9.treat_page()
+            bot6 = NavboxBot(generator=gen, **options)
+            bot6.treat_page()
 
         if options.get('airdate_order'):
             if not options.get('airdate'):
                 airdate_string = pywikibot.input('Please enter episode airdate (YYYY-MM-DD)')
                 options['airdate'] = Airdate(airdate_string)
-            bot10 = AirdateBot(generator=gen, **options)
-            bot10.treat_page()
-            options['airdate_dict'] = bot9.opt.airdate_dict
+            bot7 = AirdateBot(generator=gen, **options)
+            bot7.treat_page()
+            options['airdate_dict'] = bot7.opt.airdate_dict
 
         if options['ep'].prefix == '4SD' and options.get('4SD'):
-            bot11 = Connect4SDBot(generator=gen, **options)
-            bot11.treat_page()
+            bot8 = Connect4SDBot(generator=gen, **options)
+            bot8.treat_page()
             if not options.get('array_dicts'):
-                options['array_dicts'] = bot10.opt.array_dicts
+                options['array_dicts'] = bot8.opt.array_dicts
             if not options.get('airdate_dict'):
-                options['airdate_dict'] = bot10.opt.airdate_dict
+                options['airdate_dict'] = bot8.opt.airdate_dict
 
         if options.get('transcript'):
             if options['ep'].prefix in TRANSCRIPT_EXCLUSIONS:
                 pywikibot.output(f'\nSkipping transcript page creation for {options["ep"].show} episode')
             else:
-                bot5 = TranscriptBot(generator=gen, **options)
-                bot5.treat_page()
-                if bot5.opt.ts:
-                    options['ts'] = bot5.opt.ts
-                bot6 = TranscriptRedirectBot(generator=gen, **options)
-                bot6.treat_page()
+                bot9 = TranscriptBot(generator=gen, **options)
+                bot9.treat_page()
+                if bot9.opt.ts:
+                    options['ts'] = bot9.opt.ts
+                bot9 = TranscriptRedirectBot(generator=gen, **options)
+                bot9.treat_page()
 
         if options.get('ts'):
             dupe_count = len(options['ts'].dupe_lines)
@@ -1226,9 +1226,9 @@ def main(*args: str) -> None:
                 dupes = False
                 pywikibot.output('No duplicates found in transcript to process.')
             if dupes:
-                bot12 = DupeDetectionBot(generator=gen, **options)
-                bot12.current_page = pywikibot.Page(bot12.site, f"Transcript:{options['new_ep_name']}")
-                bot12.treat_page()
+                bot10 = DupeDetectionBot(generator=gen, **options)
+                bot10.current_page = pywikibot.Page(bot10.site, f"Transcript:{options['new_ep_name']}")
+                bot10.treat_page()
             else:
                 command = f"\n<<yellow>>python pwb.py dupes -ep:{options['ep'].code} -yt:{options['yt'].yt_id}<<default>>"
                 pywikibot.output(f'Skipping ts duplicate processing. You can run this later:{command}')
@@ -1237,8 +1237,8 @@ def main(*args: str) -> None:
             if options['ep'].prefix in TRANSCRIPT_EXCLUSIONS:
                 pywikibot.output(f'\nSkipping transcript list update for {options["ep"].show} episode')
             else:
-                bot7 = TranscriptListBot(generator=gen, **options)
-                bot7.treat_page()
+                bot11 = TranscriptListBot(generator=gen, **options)
+                bot11.treat_page()
 
         if options.get('main_page'):
             bot12 = MainPageBot(generator=gen, **options)
