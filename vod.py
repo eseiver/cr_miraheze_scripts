@@ -38,6 +38,8 @@ A number of maintenance activities can be performed together (-all) or independe
 
 -upload           Upload and link to the episode thumbnail; ignored if already exists
 
+-long_short       Check whether the runtime for the episode is one of the longest or shortest
+
 -main_page        Check to see if the latest episode image on the main page needs updating
 
 -redirects        Make sure episode code redirect(s) exist and link to newest episode name
@@ -156,6 +158,7 @@ class EpisodeBot(
         'move': None,  # move page (only if new page name exists & is different from old one)
         'upload': None,  # upload the YouTube video thumbnail
         'main_page': None,  # check the main page has the latest thumbnail
+        'long_short': None, # check whether runtime is one of longest or shortest
         'ep_list': None,  # add to/update list of episodes
         'airdate_order': None,  # add to/update the airdate order
         'yt_switcher': None,  # add to/update the yt url switcher
@@ -926,6 +929,66 @@ class MainPageBot(AirdateBot, EpArrayBot):
             pywikibot.output(f'All latest episodes {latest_episodes} already on main page')
 
 
+class LongShortBot(EpisodeBot):
+    '''For checking whether the runtime of an episode is one of the longest or shortest'''
+
+    def treat_page(self):
+        if self.opt.ep.prefix == '4SD':
+            return pywikibot.output('Skipping longest/shortest checking for {}')
+        self.current_page = pywikibot.Page(self.site, 'Longest and shortest episodes')
+        is_longest = self.check_if_longest()
+        is_shortest = self.check_if_shortest()
+        if not is_shortest and not is_longest:
+            pywikibot.output(f"{self.opt.ep.code} is neither a longest or shortest episode.")
+
+    def check_if_longest(self):
+        ep = self.opt.ep
+        runtime = Runtime(self.opt.runtime)
+        wikicode = self.get_wikicode()
+        is_longest = False
+        longest = next(x for x in wikicode.get_sections() if any([
+            y.title.matches('Longest episodes') for y in x.filter_headings()]))
+        relevant_section = next((section for section in longest.get_sections(flat=True)[2:]
+                        if ep.show.lower() in section.filter_headings()[0].title.lower()),
+                       '')
+        for section in [relevant_section, longest]:
+            if not section:
+                continue
+            h = section.filter_headings()[0]
+            records = [x.groupdict() for x in re.finditer(LONG_SHORT_REGEX, str(section))]
+            for rec in records:
+                    if runtime >= Runtime(rec['timecode']):
+                        pywikibot.output(f"{ep.code} ({runtime}) is longer than #{rec['num']} {rec['ep_code']} ({rec['timecode']}) ({h.title.strip()})")
+                        is_longest = True
+                        break
+        if runtime >= '5:00:00':
+            pywikibot.output(f"{ep.code} ({runtime}) is longer than five hours")
+        return is_longest
+
+    def check_if_shortest(self):
+        ep = self.opt.ep
+        runtime = Runtime(self.opt.runtime)
+        wikicode = self.get_wikicode()
+        is_shortest = False
+        shortest = next(x for x in wikicode.get_sections() if any(
+            [y.title.matches('Shortest episodes') for y in x.filter_headings()]))
+        shortest_overall = shortest.get_sections(flat=True)[1]
+        relevant_section = next((section for section in shortest.get_sections(flat=True)[2:]
+                                if ep.show.lower() in section.filter_headings()[0].title.lower()),
+                               '')
+        for section in [relevant_section, shortest_overall]:
+            if not section:
+                continue
+            h = section.filter_headings()[0]
+            records = [x.groupdict() for x in re.finditer(LONG_SHORT_REGEX, str(section))]
+            for rec in records:
+                if runtime <= Runtime(rec['timecode']):
+                    pywikibot.output(f"{ep.code} ({runtime}) is shorter than #{rec['num']} {rec['ep_code']} ({rec['timecode']}) ({h.title.strip()})")
+                    is_shortest = True
+                    break
+        return is_shortest
+
+
 def main(*args: str) -> None:
     """
     Process command line arguments and invoke bot.
@@ -995,7 +1058,7 @@ def main(*args: str) -> None:
     # handle which things to run if all is selected, and set to False any not yet defined
     for task in ['update_page', 'move', 'upload', 'ep_list', 'yt_switcher', 'ep_array',
                  'main_page', 'airdate_order', 'transcript', 'transcript_list', 'redirects',
-                 'navbox', '4SD']:
+                 'navbox', '4SD', 'long_short']:
         if options.get('all'):
             options[task] = True
         elif not options.get(task):
@@ -1021,7 +1084,7 @@ def main(*args: str) -> None:
             elif req == 'actors' and any([options.get(x) for x in ['update_page', 'upload']]):
                 value = pywikibot.input(f"Optional: L-R actor order in {options['ep']} thumbnail (first names ok)")
                 options[req] = Actors(value)
-            elif req == 'runtime' and any([options.get(x) for x in ['update_page', 'ep_list']]):
+            elif req == 'runtime' and any([options.get(x) for x in ['update_page', 'ep_list', 'long_short']]):
                 value = get_validated_input(arg='runtime', regex='\d{1,2}:\d{1,2}(:\d{1,2})?', input_msg="Please enter video runtime (HH:MM:SS or MM:SS)")
                 options['runtime'] = value
             elif req == 'ep':
@@ -1180,6 +1243,13 @@ def main(*args: str) -> None:
         if options.get('main_page'):
             bot12 = MainPageBot(generator=gen, **options)
             bot12.treat_page()
+
+        if options.get('long_short'):
+            if options['ep'].prefix == '4SD':
+                pywikibot.output(f'\nSkipping longest/shortest for {options["ep"].show} episode')
+            else:
+                bot13 = LongShortBot(generator=gen, **options)
+                bot13.treat_page()
 
 
 if __name__ == '__main__':

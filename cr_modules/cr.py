@@ -2,7 +2,7 @@ import re
 import sys
 
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timedelta
 from string import ascii_lowercase
 from zoneinfo import ZoneInfo
 
@@ -14,6 +14,7 @@ EP_REGEX = '^(\d+|OS|M|E\d*|U|4SD|LVM\d+|TM(OS|S)?\d*)x\d+(a|b)?$'  # https://re
 ARRAY_ENTRY_REGEX = '''\[\"(?P<epcode>.*?)\"\] = \{\s*\[\"title\"\] = \"(?P<title>.*)\",?((\s*\[\"pagename\"\] = \"(?P<pagename>.*)\",)?(\s*\[\"altTitles\"\] = \{(?P<altTitles>.*)\})?)?'''
 YT_LINK_REGEX = '(?P<vod>(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))(?P<yt_id>[-\w_]{11})(&t=(?P<timecode>.*))?)'
 YT_ID_REGEX = '[-\w_]{11}'
+LONG_SHORT_REGEX = "\|\s*(?P<num>\d+)\s*\|\|.*?\{\{ep\|(?P<ep_code>.*?)(\|.*?)?\}\}.*?\|\| (?P<timecode>(\d+:\d+){2,3})"
 
 # pagenames
 INFOBOX_EPISODE = 'Infobox Episode'
@@ -38,6 +39,15 @@ date_options = ((DATETIME_REGEX, DATETIME_FORMAT),
                 (DATE_2_REGEX, DATE_2_FORMAT),
                 (TIME_REGEX, TIME_FORMAT),
                )
+# runtimes
+RUNTIME_REGEX = '\d{1,2}:\d{2}:\d{2}'
+RUNTIME_FORMAT = '%H:%M:%S'
+RUNTIME_2_REGEX = '\d{1,2}:\d{2}'
+RUNTIME_2_FORMAT = '%M:%S'
+runtime_options = ((RUNTIME_REGEX, RUNTIME_FORMAT),
+                   (RUNTIME_2_REGEX, RUNTIME_2_FORMAT),
+                   )
+
 ACTORS = [
     # main cast
     'Ashley Johnson',
@@ -489,6 +499,71 @@ class Airdate:
     def __hash__(self):
         # necessary for dicts and sets
         return hash((self.datetime))
+
+
+def convert_string_to_timecode(time_string):
+    '''Make a timedelta object of the episode's runtime.'''
+    timecode = None
+    for regex, time_format in runtime_options:
+        if re.search(regex, time_string):
+            time_match = re.search(regex, time_string)
+            time_string = time_match.group()
+            t = datetime.strptime(time_string, time_format)
+            timecode = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
+            break
+    return timecode
+
+class Runtime:
+    def __init__(self, input_timecode):
+        if isinstance(input_timecode, timedelta):
+            self.timecode = input_timecode
+        elif isinstance(input_timecode, datetime):
+            t = input_timecode
+            self.timecode = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
+        elif isinstance(input_timecode, str):
+            self.timecode = convert_string_to_timecode(input_timecode)
+
+    def __repr__(self):
+        return str(self.timecode)
+
+    def __eq__(self, other): 
+        if not isinstance(other, Runtime):
+            # don't attempt to compare against unrelated types
+            return False
+
+        return self.timecode == other.timecode
+
+    def __lt__(self, other): 
+        if not isinstance(other, Runtime):
+            # don't attempt to compare against unrelated types
+            return False
+
+        return self.timecode < other.timecode
+
+    def __le__(self, other): 
+        if not isinstance(other, Runtime):
+            # don't attempt to compare against unrelated types
+            return False
+
+        return self.timecode <= other.timecode
+
+    def __gt__(self, other): 
+        if not isinstance(other, Runtime):
+            # don't attempt to compare against unrelated types
+            return False
+
+        return self.timecode > other.timecode
+
+    def __ge__(self, other): 
+        if not isinstance(other, Runtime):
+            # don't attempt to compare against unrelated types
+            return False
+
+        return self.timecode >= other.timecode
+
+    def __hash__(self):
+        # necessary for dicts and sets
+        return hash((self.timecode))
 
 
 def remove_comments(wikicode, return_string=True):
