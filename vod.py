@@ -114,6 +114,7 @@ from pywikibot.bot import (
 )
 from pywikibot.specialbots import UploadRobot
 from cr_modules.cr import *
+from cr_modules.ep import *
 from cr_modules.transcript import Transcript
 from dupes import DupeDetectionBot
 

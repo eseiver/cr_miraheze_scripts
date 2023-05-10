@@ -24,7 +24,8 @@ from pywikibot.bot import (
     QuitKeyboardInterrupt,
 )
 from pywikibot import pagegenerators
-from cr_modules.cr import Ep, YT, EP_REGEX, YT_ID_REGEX, get_validated_input
+from cr_modules.cr import YT, YT_ID_REGEX, get_validated_input
+from cr_modules.ep import Ep, EP_REGEX
 from cr_modules.transcript import Transcript
 
 class DuplicateProcessor:

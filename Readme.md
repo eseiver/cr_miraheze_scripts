@@ -39,7 +39,8 @@ where SCRIPTNAME is something like `vod`.
 ## Modules
 | Name                    | Description                                                       |
 | ------------------------| ----------------------------------------------------------------- |
-| [cr.py](cr.py)          | Helper functions & data for Critical Role Wiki. |
+| [ep.py](ep.py)          | Validates episode codes and infers information from them.|
+| [cr.py](cr.py)          | Misc. helper functions & data for Critical Role Wiki. |
 | [transcript.py](transcript.py) | For converting YouTube captions to transcripts. |
 
 ## Scripts
