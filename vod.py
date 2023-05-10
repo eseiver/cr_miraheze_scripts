@@ -24,7 +24,7 @@ A number of maintenance activities can be performed together (-all) or independe
 
 -move             Move the episode page from a placeholder name to the name specified in the video
 
--ep_list          Add entry to list of episodes page, as determined from EPISODE_DECODER
+-ep_list          Add entry to list of episodes page, as determined from Module:Ep/Decoder
 
 -ep_array         In Module:Ep/Array, make new episode title valid input & the display value
 
@@ -44,7 +44,7 @@ A number of maintenance activities can be performed together (-all) or independe
 
 -redirects        Make sure episode code redirect(s) exist and link to newest episode name
 
--navbox           Make sure the episode code is in the navbox, as determined from EPISODE_DECODER
+-navbox           Make sure the episode code is in the navbox, as determined from Module:Ep/Decoder
 
 -4SD              For 4-Sided Dive only, add ep_id to the 3xNN episodes since the previous
 
@@ -319,8 +319,8 @@ class EpisodeBot(
         if not infobox.has_param('Caption') or not does_value_exist(infobox, param_name='Caption'):
             infobox['Caption'] = make_image_caption(actors=self.opt.actors, ep=ep)
 
-        if not any([x.name.matches(ep.navbox_name.replace('Template:', '')) for x in wikicode.filter_templates()]):
-            wikicode.append('\n' + f"{{{{{ep.navbox_name.replace('Template:', '')}}}}}")
+        if not any([x.name.matches(ep.navbox_name) for x in wikicode.filter_templates()]):
+            wikicode.append('\n' + f"{{{{{ep.navbox_name}}}}}")
 
         if self.opt.episode_summary:
             wikicode = self.update_summary(wikicode=wikicode)
@@ -748,7 +748,7 @@ class NavboxBot(EpisodeBot):
     '''Makes sure the episode code appears on the accompanying navbox'''
 
     def treat_page(self):
-        navbox_name = self.opt.ep.navbox_name
+        navbox_name = f'Template:{self.opt.ep.navbox_name}'
         wiki_ep = self.opt.ep.wiki_code
 
         self.current_page = pywikibot.Page(self.site, navbox_name)
@@ -817,11 +817,11 @@ class AirdateBot(EpisodeBot):
         return last_earlier_ep_id
 
     def get_latest_episodes_by_type(self):
-        '''For every prefix in CURRENT_PREFIXES, get the most recently aired episode'''
+        '''For every prefix in the decoder, get the most recently aired episode'''
         airdate_dict = self.get_airdate_dict()
         aired = {k: v for k, v in airdate_dict.items() if v.datetime <= datetime.now().astimezone()}
         latest_episodes = [next((Ep(k) for k in reversed(aired.keys())
-            if Ep(k).prefix == prefix), Ep(f"{prefix}x01")) for prefix in CURRENT_PREFIXES]
+            if Ep(k).prefix == prefix), Ep(f"{prefix}x01")) for prefix in EPISODE_DECODER.keys()]
         return latest_episodes
 
     def treat_page(self):
@@ -1142,6 +1142,7 @@ def main(*args: str) -> None:
                     options['airtime'].datetime.timetz()))
         if options.get('new_page_name') != bot1.opt.new_page_name:
             options['new_page_name'] = bot1.opt.new_page_name
+
         # if image thumbnail field was filled in, do not upload.
         if bot1.opt.upload is False:
             options['upload'] = False

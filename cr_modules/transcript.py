@@ -338,7 +338,7 @@ class Transcript:
         ts = self.process_errors(ts)
 
         # Step 5: add navigation and category
-        t_cat = self.ep.transcript_category
+        t_cat = f"Category:{self.ep.transcript_category}"
         ts = ''.join(['{{Transcript-Nav}}\n__FORCETOC__\n\n', 
                       ts,
                       '\n{{Transcript-Nav}}\n', 
