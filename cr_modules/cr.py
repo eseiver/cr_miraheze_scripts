@@ -273,18 +273,27 @@ class Ep:
         return trs
 
     @property
-    def ce_code(self):
-        '''For creating the C[Campaign]E[Episode] formatted code. Used by CR.'''
+    def is_campaign(self):
         if self.prefix.isdigit():
-            ce = f'C{self.prefix}E{self.number}'
+            return True
         else:
-            ce = ''
-        return ce
+            return False
+
+    @property
+    def ce_codes(self):
+        '''For creating the C[Campaign]E[Episode] formatted code. Used by CR.'''
+        ces = []
+        if self.is_campaign:
+            for code in self.generate_equivalent_codes():
+                campaign, number = code.split('x')
+                ce = f'C{campaign}E{number}'
+                ces.append(ce)
+        return ces
 
     @property
     def ce_words(self):
-        '''For creating the written-out version of self.ce_code.'''
-        if self.prefix.isdigit():
+        '''For creating the written-out version of self.ce_codes.'''
+        if self.is_campaign:
             words = f'Campaign {self.prefix} Episode {self.number}'
         else:
             words = ''

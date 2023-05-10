@@ -185,9 +185,12 @@ def main(*args: str) -> None:
 
     posts = get_search_results()
 
-    # if campaign episode, find Ep.ce_code in blogpost title
-    if posts and options['ep'].ce_code and not url:
-        post = next((post for post in posts if options['ep'].ce_code in post.title), None)
+    # if campaign episode, find Ep.ce_codes in blogpost title
+    if posts and options['ep'].ce_codes and not url:
+        post = next(
+            (post for post in posts if any(
+            [x in post.title for x in options['ep'].ce_codes])),
+            None)
         if post:
             correct = pywikibot.input_yn(f'\n<<yellow>>Does this title match?<<default>>\n"{post.title}"')
             if correct:
