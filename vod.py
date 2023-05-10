@@ -48,6 +48,8 @@ A number of maintenance activities can be performed together (-all) or independe
 
 -4SD              For 4-Sided Dive only, add ep_id to the 3xNN episodes since the previous
 
+-decoder          For forcing a re-download of Module:Ep/Decoder. Does not occur with -all
+
 Use global -simulate option for test purposes. No changes to live wiki will be done.
 For every potential change, you will be shown a diff of the edit and asked to accept or reject it.
 No changes will be made automatically. Actions are skipped if change is not needed (e.g., an entry for
@@ -1025,7 +1027,11 @@ def main(*args: str) -> None:
     for arg in local_args:
         arg, _, value = arg.partition(':')
         option = arg[1:]
-        if option in ['ep_id', 'ep']:
+        if option == 'decoder':
+            decoder = Decoder(force_download=True)
+            EPISODE_DECODER = decoder._json
+            pywikibot.output("Episode decoder re-downloaded.")
+        elif option in ['ep_id', 'ep']:
             value = get_validated_input(arg='ep', value=value, regex=EP_REGEX)
             options['ep'] = Ep(value)
         elif option in ['yt_id', 'yt']:
