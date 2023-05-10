@@ -670,7 +670,8 @@ class RedirectFixerBot(EpisodeBot):
 
     def treat_page(self):
         ep = self.opt.ep
-        for code in ep.generate_equivalent_codes():
+        all_codes = ep.generate_equivalent_codes() + ep.ce_codes
+        for code in all_codes:
             self.current_page = pywikibot.Page(self.site, code)
             text = f"#REDIRECT [[{self.opt.new_page_name}]]"
             self.put_current(text, summary="Updating/creating episode redirects (via pywikibot)")
