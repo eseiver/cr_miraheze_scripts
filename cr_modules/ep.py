@@ -2,6 +2,7 @@ import json
 import os
 import re
 
+from copy import deepcopy
 from string import ascii_lowercase
 
 import pywikibot
@@ -31,12 +32,24 @@ class Decoder:
     def download_decoder_json(self):
         site = pywikibot.Site()
         _json = json.loads(site.expand_text('{{#invoke:Json exporter|dump_as_json|Module:Ep/Decoder}}'))
+        _json = self.fix_seasons(_json)
         return _json
 
     def create_from_json_file(self):
         with open(self.json_filename) as f:
             _json = json.load(f)
         return _json
+
+    def fix_seasons(self, _json):
+        '''When downloading .json, Lua removes season numbers. Restores them as dict.'''
+        copied_json = deepcopy(_json)
+        for k, v in dict(copied_json).items():
+            if v.get('seasons'):
+                _json[k]['seasons'] = {}
+                for i, season in enumerate(v['seasons']):
+                    _json[k]['seasons'][str(i)] = season
+        return _json
+
 
 decoder = Decoder()
 EPISODE_DECODER = decoder._json
