@@ -61,6 +61,7 @@ ACTORS = [
 
     # guest stars
     'Aabria Iyengar',
+    'Anjali Bhimani',
     'Brennan Lee Mulligan',
     'Dani Carr',
     'Erika Ishii',
@@ -69,7 +70,7 @@ ACTORS = [
 ]
 SPEAKER_TAGS = [
     'ASHLEY', 'LAURA', 'LIAM', 'MARISHA', 'MATT', 'SAM', 'TALIESIN', 'TRAVIS',
-    'ALL', 'AABRIA', 'BRENNAN', 'DANI', 'ERIKA', 'ROBBIE', 'CHRISTIAN',
+    'ALL', 'AABRIA', 'ANJALI', 'BRENNAN', 'CHRISTIAN', 'DANI', 'ERIKA', 'ROBBIE', 
 ]
 EPISODE_DECODER = {
     '3': ('Campaign 3', 'List of Campaign 3 episodes',
