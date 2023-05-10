@@ -1,3 +1,5 @@
+import json
+import os
 import re
 import sys
 
@@ -8,6 +10,8 @@ from zoneinfo import ZoneInfo
 
 import pywikibot
 
+DATA_PATH = '/'.join([pywikibot.config.user_script_paths[0], 'data'])
+os.makedirs(DATA_PATH, exist_ok=True)
 
 # regular expressions for string matching
 EP_REGEX = '^(\d+|OS|M|E\d*|U|4SD|LVM\d+|TM(OS|S)?\d*)x\d+(a|b)?$'  # https://regex101.com/r/QXhVhb/4
@@ -72,25 +76,25 @@ SPEAKER_TAGS = [
     'ASHLEY', 'LAURA', 'LIAM', 'MARISHA', 'MATT', 'SAM', 'TALIESIN', 'TRAVIS',
     'ALL', 'AABRIA', 'ANJALI', 'BRENNAN', 'CHRISTIAN', 'DANI', 'ERIKA', 'ROBBIE', 
 ]
-EPISODE_DECODER = {
-    '3': ('Campaign 3', 'List of Campaign 3 episodes',
-          'Campaign 3 episode thumbnails', 'Template:Nav-C3Arc1',
-          'Category:Campaign 3 transcripts'),
-    'OS': ('One-shots', 'One-shots', 'One-shot episode thumbnails',
-           'Template:Nav-OneShots', 'Category:One-shot transcripts'),
-    'M': ('Bits and bobs', 'Bits and bobs',
-          'Bits and bobs episode thumbnails',  'Template:Nav-Bitsnbobs',
-          'Category:Transcripts'),
-    'LVM2': ('The Legend of Vox Machina',
-            'List of The Legend of Vox Machina episodes',
-            'The Legend of Vox Machina episode thumbnails',
-            'Template:Nav-LoVM Season 2',
-            'Category:Transcripts'),
-    '4SD': ('4-Sided Dive', '4-Sided Dive', 'Episode thumbnails', 'Template:Nav-4SD',
-            'Category:Transcripts'),
+# EPISODE_DECODER = {
+#     '3': ('Campaign 3', 'List of Campaign 3 episodes',
+#           'Campaign 3 episode thumbnails', 'Template:Nav-C3Arc1',
+#           'Category:Campaign 3 transcripts'),
+#     'OS': ('One-shots', 'One-shots', 'One-shot episode thumbnails',
+#            'Template:Nav-OneShots', 'Category:One-shot transcripts'),
+#     'M': ('Bits and bobs', 'Bits and bobs',
+#           'Bits and bobs episode thumbnails',  'Template:Nav-Bitsnbobs',
+#           'Category:Transcripts'),
+#     'LVM2': ('The Legend of Vox Machina',
+#             'List of The Legend of Vox Machina episodes',
+#             'The Legend of Vox Machina episode thumbnails',
+#             'Template:Nav-LoVM Season 2',
+#             'Category:Transcripts'),
+#     '4SD': ('4-Sided Dive', '4-Sided Dive', 'Episode thumbnails', 'Template:Nav-4SD',
+#             'Category:Transcripts'),
     # 'Ep_type': ('show page', 'episode list page',
     # 'episode thumbnail category', 'navbox', 'transcript category'),
-}
+# }
 
 # Episode codes where the transcript will not be added (-transcript is auto-skipped)
 TRANSCRIPT_EXCLUSIONS = ['4SD', 'LVM2']
@@ -121,6 +125,59 @@ def join_array_on_and(str_iter):
         return_val = ', '.join([*str_iter[:-1], f'and {str_iter[-1]}'])
     return return_val
 
+
+class Decoder:
+    '''Replaces EPISODE_DECODER with information about every (active) campaign, series, and season.'''
+    def __init__(self, filter_to_active=True, json_filename='decoder.json',
+                force_download=False, try_local_file=True, write_file=True):
+        self.filter_to_active = filter_to_active
+        self.json_filename = '/'.join([DATA_PATH, json_filename])
+        self.try_local_file = try_local_file
+        # check for local file first
+        if self.try_local_file:
+            try:
+                self.decoder_json = self.create_from_json_file()
+            except FileNotFoundError:
+                pass
+
+        if not hasattr(self, 'decoder_json') or force_download is True:
+            self.decoder_json = self.download_decoder_json()
+            if write_file:
+                with open(self.json_filename, 'w', encoding='utf-8') as json_file:
+                    json_file.write(json.dumps(self.decoder_json))
+
+        self.decoder_dict = self.build_decoder_dict()
+
+    def download_decoder_json(self, filter_to_active=None):
+        site = pywikibot.Site()
+        decoder_json = json.loads(site.expand_text('{{#invoke:Json exporter|dump_as_json|Module:Ep/Decoder/sandbox}}'))
+        return decoder_json
+
+    def build_decoder_dict(self, decoder_json=None, filter_to_active=None):
+        if decoder_json is None:
+            decoder_json = self.decoder_json
+        if filter_to_active is None:
+            filter_to_active = self.filter_to_active
+        decoder_dict = {}
+        for campaign_code, campaign_info in decoder_json.items():
+            show_title = campaign_info['title']
+            list_title = campaign_info.get('listLink', show_title)
+            thumbnail_category = campaign_info.get('thumbnailCategory', 'Thumbnails')
+            transcript_category = f"Category:{campaign_info.get('transcriptCategory', 'Transcripts')}"
+            navbox = f"Template:{campaign_info.get('navbox', '')}"
+            values = (show_title, list_title, thumbnail_category, navbox, transcript_category)
+            decoder_dict[campaign_code] = values
+        if filter_to_active:
+            decoder_dict = {k:v for k, v in decoder_dict.items() if k in CURRENT_PREFIXES}
+        return decoder_dict
+
+    def create_from_json_file(self):
+        with open(self.json_filename) as f:
+            decoder_json = json.load(f)
+        return decoder_json
+
+decoder = Decoder()
+EPISODE_DECODER = decoder.decoder_dict
 
 class Ep:
     '''for handling episode ids'''
