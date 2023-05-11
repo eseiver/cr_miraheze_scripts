@@ -47,7 +47,7 @@ class Decoder:
             if v.get('seasons'):
                 _json[k]['seasons'] = {}
                 for i, season in enumerate(v['seasons']):
-                    _json[k]['seasons'][str(i)] = season
+                    _json[k]['seasons'][str(i+1)] = season
         return _json
 
 
