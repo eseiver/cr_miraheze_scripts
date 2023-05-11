@@ -13,9 +13,10 @@ os.makedirs(DATA_PATH, exist_ok=True)
 class Decoder:
     '''Information about every (active) campaign, series, and season.'''
     def __init__(self, json_filename='decoder.json', force_download=False,
-                 try_local_file=True, write_file=True):
+                 try_local_file=True, write_file=True, pretty_print=True):
         self.json_filename = '/'.join([DATA_PATH, json_filename])
         self.try_local_file = try_local_file
+        self.pretty_print = pretty_print
         # check for local file first
         if self.try_local_file:
             try:
@@ -27,7 +28,10 @@ class Decoder:
             self._json = self.download_decoder_json()
             if write_file:
                 with open(self.json_filename, 'w', encoding='utf-8') as json_file:
-                    json_file.write(json.dumps(self._json))
+                    if self.pretty_print:
+                        json_file.write(json.dumps(self._json, indent=4))
+                    else:
+                        json_file.write(json.dumps(self._json))
 
     def download_decoder_json(self):
         site = pywikibot.Site()
