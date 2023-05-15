@@ -823,8 +823,8 @@ class AirdateBot(EpisodeBot):
         '''For every prefix in the decoder, get the most recently aired episode'''
         airdate_dict = self.get_airdate_dict()
         aired = {k: v for k, v in airdate_dict.items() if v.datetime <= datetime.now().astimezone()}
-        latest_episodes = [next((Ep(k) for k in reversed(aired.keys())
-            if Ep(k).prefix == prefix), Ep(f"{prefix}x01")) for prefix in EPISODE_DECODER.keys()]
+        latest_episodes = [next((Ep(k) for k in reversed(aired.keys()) if Ep(k).prefix == prefix), None) 
+                           for prefix, v in EPISODE_DECODER.items() if v.get('navbox')]
         return latest_episodes
 
     def treat_page(self):

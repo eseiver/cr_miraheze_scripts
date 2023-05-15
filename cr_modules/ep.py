@@ -68,7 +68,7 @@ def build_prefix_options():
         else:
             key_list.append(key)
     # handle TM
-    key_list += [r'TMOS\d+', r'TM\d+', 'TMS'] 
+    key_list += [r'TMOS', r'TM\d*', 'TMS'] 
     return key_list
 
 def build_prefix_regex():
@@ -118,9 +118,16 @@ class Ep:
             return True
 
     @property
+    def full_prefix(self):
+        full_prefix = self.code.split('x')[0]
+        return full_prefix
+
+    @property
     def prefix(self):
-        prefix = self.code.split('x')[0]
-        return prefix
+        if self.is_campaign or not self.full_prefix[-1].isdigit():
+            return self.full_prefix
+        else:
+            return self.full_prefix[:-1]
 
     @property
     def number(self):
@@ -173,7 +180,7 @@ class Ep:
 
     @property
     def is_campaign(self):
-        if self.prefix.isdigit():
+        if self.full_prefix.isdigit():
             return True
         else:
             return False
@@ -213,9 +220,9 @@ class Ep:
         if len([x for x in str(self.number) if x.isdigit()]) >= self.padding_limit:
             code_list = [self.code]
         elif not self.ends_in_letter:
-            code_list = ['x'.join([self.prefix, str(self.number).zfill(1+n)]) for n in range(self.padding_limit)]
+            code_list = ['x'.join([self.full_prefix, str(self.number).zfill(1+n)]) for n in range(self.padding_limit)]
         else:
-            code_list = ['x'.join([self.prefix, str(self.number).zfill(1+n)]) + self.code[-1] for n in range(self.padding_limit)]
+            code_list = ['x'.join([self.full_prefix, str(self.number).zfill(1+n)]) + self.code[-1] for n in range(self.padding_limit)]
         return code_list
 
     def get_previous_episode(self):
@@ -228,10 +235,10 @@ class Ep:
             look_up = dict(zip(ascii_lowercase, ascii_lowercase[1:]+'a'))
             letter = next(k for k, v in look_up.items() if v == suffix)
         if old_number > 0 and (not self.ends_in_letter or self.code.endswith('a')):
-            old_id = 'x'.join([self.prefix, f"{old_number:02}"])
+            old_id = 'x'.join([self.full_prefix, f"{old_number:02}"])
             previous_episode = Ep(old_id)
         elif old_number > 0:
-            old_id = 'x'.join([self.prefix, f"{old_number:02}"]) + letter
+            old_id = 'x'.join([self.full_prefix, f"{old_number:02}"]) + letter
             previous_episode = Ep(old_id)
         else:
             # no previous id, because the first of its kind
@@ -248,10 +255,10 @@ class Ep:
             look_up = dict(zip(ascii_lowercase, ascii_lowercase[1:]+'a'))
             letter = next(k for k, v in look_up.items() if v == suffix)
         if next_number > 0 and (not self.ends_in_letter or self.code.endswith('a')):
-            next_id = 'x'.join([self.prefix, f"{next_number:02}"])
+            next_id = 'x'.join([self.full_prefix, f"{next_number:02}"])
             next_episode = Ep(next_id)
         elif next_number > 0:
-            next_id = 'x'.join([self.prefix, f"{next_number:02}"]) + letter
+            next_id = 'x'.join([self.full_prefix, f"{next_number:02}"]) + letter
             next_episode = Ep(next_id)
         else:
             # no previous id, because the first of its kind
