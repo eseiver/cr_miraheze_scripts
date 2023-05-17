@@ -237,8 +237,8 @@ class EpisodeBot(
 
         if wikicode is None:
             wikicode = self.get_wikicode()
-        else:
-            text = str(wikicode)
+
+        text = str(wikicode)
 
         # if there's an episode summary not included in the text, create new article text
         no_markup = ''.join([str(x) for x in wikicode.filter_text()])
