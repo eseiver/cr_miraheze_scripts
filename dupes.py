@@ -26,7 +26,7 @@ from pywikibot.bot import (
 from pywikibot import pagegenerators
 from cr_modules.cr import YT, YT_ID_REGEX, get_validated_input
 from cr_modules.ep import Ep, EP_REGEX
-from cr_modules.transcript import Transcript
+from cr_modules.transcript import YoutubeTranscript
 
 class DuplicateProcessor:
     '''Interactive tool for deleting duplicate phrases from captions.'''
@@ -34,7 +34,7 @@ class DuplicateProcessor:
     #     self.transcript = transcript
 
     def process_duplicates(self, t):
-        # assert isinstance(t, Transcript), 'Must be object of type Transcript.'
+        # assert isinstance(t, YoutubeTranscript), 'Must be object of type YoutubeTranscript.'
 
         line_pairs = []
         try:
@@ -94,7 +94,7 @@ class DupeDetectionBot(SingleSiteBot, ExistingPageBot):
     update_options = {
         'ep': None,  # Ep object
         'yt': None,  # YouTube ID/URL, if known
-        'ts': None,  # Transcript object
+        'ts': None,  # YoutubeTranscript object
         'transcript_link': None,  # link to transcript wiki page
         'ignore_existing': False,  # whether to ignore existing wiki ts (defaults to using it)
     }
@@ -116,7 +116,7 @@ class DupeDetectionBot(SingleSiteBot, ExistingPageBot):
     def get_transcript(self):
         if not self.opt.ts:
             self.get_wiki_transcript()
-            self.opt.ts = Transcript().from_text(self.current_page.text)
+            self.opt.ts = YoutubeTranscript().from_text(self.current_page.text)
         return self.opt.ts
 
     def process_duplicates(self):
@@ -131,7 +131,7 @@ class DupeDetectionBot(SingleSiteBot, ExistingPageBot):
 
     def treat_page(self) -> None:
         if not self.opt.ts:
-            self.opt.ts = Transcript(ep=self.opt.ep, yt=self.opt.yt)
+            self.opt.ts = YoutubeTranscript(ep=self.opt.ep, yt=self.opt.yt)
             self.opt.ts.download_and_build_transcript()
         else:
             self.get_transcript_info()

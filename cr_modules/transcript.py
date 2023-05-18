@@ -106,14 +106,16 @@ class Breakfinder:
         return revised_transcript
 
 
-class Transcript:
+class YoutubeTranscript:
     def __init__(self, ep, yt, write_ts_file=False, ignore_duplicates=False,
                  ignore_break=False, try_local_file=True, preserve_formatting=True,
                  force_redownload=False, **kwargs):
         self.ep = ep
         self.yt = yt
-        self.text_filename = f"{self.ep.code}.txt"
-        self.json_filename = f"{self.ep.code}.json"
+        self.transcript_folder = 'transcripts'
+        self.json_folder = 'transcript_json'
+        self.text_filename = f"{self.transcript_folder}/{self.ep.code}.txt"
+        self.json_filename = f"{self.json_folder}/{self.ep.code}.json"
         self.write_ts_file = write_ts_file
         self.force_redownload = force_redownload
         self.try_local_file = try_local_file

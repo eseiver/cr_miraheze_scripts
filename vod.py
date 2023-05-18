@@ -117,7 +117,7 @@ from pywikibot.bot import (
 from pywikibot.specialbots import UploadRobot
 from cr_modules.cr import *
 from cr_modules.ep import *
-from cr_modules.transcript import Transcript
+from cr_modules.transcript import YoutubeTranscript
 from dupes import DupeDetectionBot
 
 
@@ -168,7 +168,7 @@ class EpisodeBot(
         'ep_array': None,  # add to/update the ep array
         'transcript': None,  # create episode transcript page (auto-skips TRANSCRIPT_EXCLUSIONS)
         'transcript_list': None,  # add transcript page to list of transcripts (auto-skips TRANSCRIPT_EXCLUSIONS)
-        'ts': None, # Transcript object
+        'ts': None, # YoutubeTranscript object
         'redirects': None,  # add/update redirects from ep_id to new_page_name
         'navbox': None,  # add ep_id to the appropriate navbox template
         '4SD': None,  # add 4SD param to 3xNN pages (4SD only)
@@ -609,7 +609,7 @@ class TranscriptBot(EpisodeBot):
     '''For creating the transcript page by downloading and processing youtube captions.'''
 
     def build_transcript(self):
-        ts = Transcript(ep=self.opt.ep, yt=self.opt.yt)
+        ts = YoutubeTranscript(ep=self.opt.ep, yt=self.opt.yt)
         ts.download_and_build_transcript()
         return ts
 
