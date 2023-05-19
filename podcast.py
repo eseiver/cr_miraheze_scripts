@@ -25,7 +25,9 @@ from pywikibot.bot import (
 from pywikibot import pagegenerators
 import requests
 from bs4 import BeautifulSoup
-from cr_modules.cr import Ep, PODCAST_SWITCHER, get_validated_input, EP_REGEX
+from cr_modules.ep import Ep, EP_REGEX
+from cr_modules.cr import PODCAST_SWITCHER, get_validated_input
+
 
 CRITROLE_TAG_URL = 'https://critrole.com/podcasts/page/'
 headers = {'User-Agent': 'PWBot 1.0'}
