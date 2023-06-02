@@ -115,6 +115,7 @@ from pywikibot.bot import (
     QuitKeyboardInterrupt,
 )
 from pywikibot.specialbots import UploadRobot
+import requests
 from cr_modules.cr import *
 from cr_modules.ep import *
 from cr_modules.transcript import YoutubeTranscript
@@ -335,6 +336,40 @@ class EpisodeBot(
 
         if (self.opt.move or self.opt.all) and self.opt.new_page_name != self.opt.old_ep_name:
             self.move_page()
+
+def verify_default_thumbnail_url(yt):
+    if type(yt) == str:
+        url = yt
+    elif type(yt) == YT:
+        url = yt.thumbnail_url
+
+    r = requests.get(url)
+    if r.ok:
+        return url
+    elif type(yt) == YT:
+        r2 = requests.get(yt.thumbnail_url_backup)
+        if r2.ok:
+            return yt.thumbnail_url_backup
+    return None
+
+def select_thumbnail_url(yt):
+    '''Interactive way to select thumbnail url if default fails.'''
+    verified = verify_default_thumbnail_url(yt)
+    if verified == yt.thumbnail_url:
+        url = yt.thumbnail_url
+    elif verified == yt.thumbnail_url_backup:
+        pywikibot.output('Highest-res YouTube thumbnail was not found.\n')
+        choices = [('Use lower-res YouTube thumbnail', '1'), ('Use Twitter or other image url', '2')]
+        response = pywikibot.input_choice(
+            'What would you like to do?',
+            choices)
+        if response == '1':
+            url = yt.thumbnail_url_backup
+        else:
+            url = pywikibot.input('Enter the url for the high-quality episode thumbnail')
+    else:
+        url = ''
+    return url
 
 
 class EpArrayBot(EpisodeBot):
@@ -1160,15 +1195,19 @@ def main(*args: str) -> None:
                                                       )
             summary = f"{options['ep'].code} episode thumbnail (uploaded via pywikibot)"
             filename = options['ep'].image_filename
-            thumbnail_bot = UploadRobot(
-                generator=gen,
-                url=options['yt'].thumbnail_url,
-                description=description,
-                use_filename=filename,
-                summary=summary,
-                verify_description=True,
-            )
-            thumbnail_bot.run()
+            thumbnail_url = select_thumbnail_url(options['yt'])
+            if thumbnail_url:
+                thumbnail_bot = UploadRobot(
+                    generator=gen,
+                    url=thumbnail_url,
+                    description=description,
+                    use_filename=filename,
+                    summary=summary,
+                    verify_description=True,
+                )
+                thumbnail_bot.run()
+            else:
+                pywikibot.output('High-res and backup YouTube thumbnail not found. Check if YouTube ID is correct.')
 
         if options.get('ep_array'):
             bot2 = EpArrayBot(generator=gen, **options)

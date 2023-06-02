@@ -211,6 +211,11 @@ class YT:
         url = f"https://img.youtube.com/vi/{self.yt_id}/maxresdefault.jpg"
         return url
 
+    @property
+    def thumbnail_url_backup(self):
+        url = f"https://img.youtube.com/vi/{self.yt_id}/hqdefault.jpg"
+        return url
+
 
 def convert_timezone(string, tz=TIMEZONE):
     '''Convert timezone abbreviation to tzinfo-formatted string.'''
