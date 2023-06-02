@@ -112,7 +112,7 @@ class YoutubeTranscript:
                  force_redownload=False, **kwargs):
         self.ep = ep
         self.yt = yt
-        self.transcript_folder = 'transcripts'
+        self.transcript_folder = 'generated_transcripts'
         self.json_folder = 'transcript_json'
         self.text_filename = f"{self.transcript_folder}/{self.ep.code}.txt"
         self.json_filename = f"{self.json_folder}/{self.ep.code}.json"
