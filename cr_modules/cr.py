@@ -68,10 +68,15 @@ ACTORS = [
     'Erika Ishii',
     'Robbie Daymond',
     'Christian Navarro',
+    'Emily Axford',
+    'Omar Najam',
+    'Utkarsh Ambudkar',
+    'Aimee Carrero',
 ]
 SPEAKER_TAGS = [
     'ASHLEY', 'LAURA', 'LIAM', 'MARISHA', 'MATT', 'SAM', 'TALIESIN', 'TRAVIS',
-    'ALL', 'AABRIA', 'ANJALI', 'BRENNAN', 'CHRISTIAN', 'DANI', 'ERIKA', 'ROBBIE', 
+    'ALL', 'AABRIA', 'ANJALI', 'BRENNAN', 'CHRISTIAN', 'DANI', 'ERIKA', 'ROBBIE',
+    'EMILY', 'OMAR', 'UTKARSH', 'AIMEE'
 ]
 
 # Episode codes where the transcript will not be added (-transcript is auto-skipped)
