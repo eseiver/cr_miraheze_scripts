@@ -1078,6 +1078,8 @@ def main(*args: str) -> None:
         decoder = Decoder()
     EPISODE_DECODER = decoder._json
     EP_REGEX = Ep('1x01', episode_decoder=EPISODE_DECODER).ep_regex
+    TRANSCRIPT_EXCLUSIONS = [k for k, v in decoder._json.items()
+                             if v.get('noTranscript') is True]
 
     if not 'ACTOR_DATA' in locals():
         ACTOR_DATA = ActorData()

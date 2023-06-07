@@ -50,9 +50,6 @@ runtime_options = ((RUNTIME_REGEX, RUNTIME_FORMAT),
                    (RUNTIME_2_REGEX, RUNTIME_2_FORMAT),
                    )
 
-# Episode codes where the transcript will not be added (-transcript is auto-skipped)
-TRANSCRIPT_EXCLUSIONS = ['4SD', 'LVM2']
-
 
 def does_value_exist(infobox_obj, param_name):
     '''On a wiki, a parameter's value is blank if it either a) just whitespace or b) a comment.
