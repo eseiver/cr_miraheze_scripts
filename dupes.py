@@ -25,7 +25,7 @@ from pywikibot.bot import (
 )
 from pywikibot import pagegenerators
 from cr_modules.cr import YT, YT_ID_REGEX, get_validated_input
-from cr_modules.ep import Ep, EP_REGEX
+from cr_modules.ep import Ep
 from cr_modules.transcript import YoutubeTranscript
 
 class DuplicateProcessor:
@@ -169,6 +169,7 @@ def main(*args: str) -> None:
             options[arg] = value
 
     if not options.get('ep') and not options.get('transcript'):
+        EP_REGEX = Ep('1x01').ep_regex
         value = get_validated_input(arg='ep', regex=EP_REGEX)
         options['ep'] = Ep(value)
     if not options.get('yt') and not options.get('transcript'):

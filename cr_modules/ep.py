@@ -3,6 +3,7 @@ import os
 import re
 
 from copy import deepcopy
+from dataclasses import dataclass, field
 from string import ascii_lowercase
 
 import pywikibot
@@ -10,33 +11,38 @@ import pywikibot
 DATA_PATH = '/'.join([pywikibot.config.user_script_paths[0], 'data'])
 os.makedirs(DATA_PATH, exist_ok=True)
 
-class Decoder:
-    '''Information about every (active) campaign, series, and season.'''
-    def __init__(self, json_filename='decoder.json', force_download=False,
-                 try_local_file=True, write_file=True, pretty_print=True):
-        self.json_filename = '/'.join([DATA_PATH, json_filename])
-        self.try_local_file = try_local_file
-        self.pretty_print = pretty_print
+@dataclass
+class LuaReader:
+    '''For storing Lua data modules as json and reading from them.'''
+    module_name: str
+    json_filename: str
+    force_download: bool = False
+    try_local_file: bool = True
+    write_file: bool = True
+    pretty_print: bool = True
+
+    def __post_init__(self):
+        self.json_filename = '/'.join([DATA_PATH, self.json_filename])
         # check for local file first
+        self._json = {}
         if self.try_local_file:
             try:
                 self._json = self.create_from_json_file()
             except FileNotFoundError:
                 pass
 
-        if not hasattr(self, '_json') or force_download is True:
-            self._json = self.download_decoder_json()
-            if write_file:
+        if not self._json or self.force_download is True:
+            self._json = self.download_json()
+            if self.write_file:
                 with open(self.json_filename, 'w', encoding='utf-8') as json_file:
                     if self.pretty_print:
                         json_file.write(json.dumps(self._json, indent=4))
                     else:
                         json_file.write(json.dumps(self._json))
 
-    def download_decoder_json(self):
+    def download_json(self):
         site = pywikibot.Site()
-        _json = json.loads(site.expand_text('{{#invoke:Json exporter|dump_as_json|Module:Ep/Decoder}}'))
-        _json = self.fix_seasons(_json)
+        _json = json.loads(site.expand_text(f'{{{{#invoke:Json exporter|dump_as_json|Module:{self.module_name}}}}}'))
         return _json
 
     def create_from_json_file(self):
@@ -44,8 +50,21 @@ class Decoder:
             _json = json.load(f)
         return _json
 
-    def fix_seasons(self, _json):
+@dataclass
+class Decoder(LuaReader):
+    '''Information about every (active) campaign, series, and season.'''
+    module_name: str = 'Ep/Decoder'
+    json_filename: str = 'decoder.json'
+
+    def download_json(self):
+        self._json = super().download_json()
+        _json = self.fix_seasons()
+        return _json
+
+    def fix_seasons(self, _json=None):
         '''When downloading .json, Lua removes season numbers. Restores them as dict.'''
+        if _json is None:
+            _json = self._json
         copied_json = deepcopy(_json)
         for k, v in dict(copied_json).items():
             if v.get('seasons'):
@@ -58,9 +77,11 @@ class Decoder:
 decoder = Decoder()
 EPISODE_DECODER = decoder._json
 
-def build_prefix_options():
+def build_prefix_options(episode_decoder=None):
+    if episode_decoder is None:
+        episode_decoder = EPISODE_DECODER
     key_list = []
-    for key, value in EPISODE_DECODER.items():
+    for key, value in episode_decoder.items():
         if 'TM' in key:
             continue
         if value.get('seasons'):
@@ -71,22 +92,30 @@ def build_prefix_options():
     key_list += [r'TMOS', r'TM\d*', 'TMS'] 
     return key_list
 
-def build_prefix_regex():
-    key_list = build_prefix_options()
+def build_prefix_regex(episode_decoder=None):
+    if episode_decoder is None:
+        episode_decoder = EPISODE_DECODER
+    key_list = build_prefix_options(episode_decoder=episode_decoder)
     regex = '^(' + '|'.join(key_list) + ')'
     return regex
 
-EP_REGEX = build_prefix_regex() + 'x\d+(a|b)?$'  # https://regex101.com/r/QXhVhb/4
+# EP_REGEX = build_prefix_regex(episode_decoder=EPISODE_DECODER) + 'x\d+(a|b)?$'  # https://regex101.com/r/QXhVhb/4
 
 class Ep:
     '''for handling episode ids'''
-    def __init__(self, episode_code, padding_limit=2):
+    def __init__(self, episode_code, padding_limit=2, episode_decoder=None):
         episode_code = episode_code.strip()
-        assert re.match(EP_REGEX, episode_code, flags=re.IGNORECASE), f"{episode_code} not valid. Check Module:Ep/Decoder and data/decoder.json"
-        self._code = episode_code
         self.code = self.standardize_code(episode_code)
+        if not episode_decoder:
+            self.episode_decoder = EPISODE_DECODER
+        else:
+            self.episode_decoder = episode_decoder
+        self.ep_regex = build_prefix_regex(episode_decoder=self.episode_decoder)
+        assert re.match(self.ep_regex, episode_code, flags=re.IGNORECASE), f"{episode_code} not valid. Check Module:Ep/Decoder and data/decoder.json"
+        self._code = episode_code
         self.padding_limit = padding_limit
         self.max_letter = 'b'
+
 
     def __repr__(self):
         return self.code
@@ -140,23 +169,23 @@ class Ep:
 
     @property
     def show(self):
-        return EPISODE_DECODER[self.prefix]['title']
+        return self.episode_decoder[self.prefix]['title']
 
     @property
     def list_page(self):
-        return EPISODE_DECODER[self.prefix].get('listLink', self.show)
+        return self.episode_decoder[self.prefix].get('listLink', self.show)
 
     @property
     def thumbnail_page(self):
-        return EPISODE_DECODER[self.prefix].get('thumbnailCategory', 'Episode thumbnails')
+        return self.episode_decoder[self.prefix].get('thumbnailCategory', 'Episode thumbnails')
 
     @property
     def navbox_name(self):
-        return EPISODE_DECODER[self.prefix].get('navbox', '')
+        return self.episode_decoder[self.prefix].get('navbox', '')
 
     @property
     def transcript_category(self):
-        return EPISODE_DECODER[self.prefix].get('transcriptCategory', 'Transcripts')
+        return self.episode_decoder[self.prefix].get('transcriptCategory', 'Transcripts')
 
     @property
     def image_filename(self):
@@ -236,10 +265,10 @@ class Ep:
             letter = next(k for k, v in look_up.items() if v == suffix)
         if old_number > 0 and (not self.ends_in_letter or self.code.endswith('a')):
             old_id = 'x'.join([self.full_prefix, f"{old_number:02}"])
-            previous_episode = Ep(old_id)
+            previous_episode = Ep(old_id, episode_decoder=self.episode_decoder)
         elif old_number > 0:
             old_id = 'x'.join([self.full_prefix, f"{old_number:02}"]) + letter
-            previous_episode = Ep(old_id)
+            previous_episode = Ep(old_id, episode_decoder=self.episode_decoder)
         else:
             # no previous id, because the first of its kind
             previous_episode = None
@@ -256,10 +285,10 @@ class Ep:
             letter = next(k for k, v in look_up.items() if v == suffix)
         if next_number > 0 and (not self.ends_in_letter or self.code.endswith('a')):
             next_id = 'x'.join([self.full_prefix, f"{next_number:02}"])
-            next_episode = Ep(next_id)
+            next_episode = Ep(next_id, episode_decoder=self.episode_decoder)
         elif next_number > 0:
             next_id = 'x'.join([self.full_prefix, f"{next_number:02}"]) + letter
-            next_episode = Ep(next_id)
+            next_episode = Ep(next_id, episode_decoder=self.episode_decoder)
         else:
             # no previous id, because the first of its kind
             next_episode = None

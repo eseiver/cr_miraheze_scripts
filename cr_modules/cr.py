@@ -4,12 +4,13 @@ import re
 import sys
 
 from copy import deepcopy
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import pywikibot
 
-from .ep import Ep
+from .ep import Ep, LuaReader
 
 # regular expressions for string matching
 ARRAY_ENTRY_REGEX = '''\[\"(?P<epcode>.*?)\"\] = \{\s*\[\"title\"\] = \"(?P<title>.*)\",?((\s*\[\"pagename\"\] = \"(?P<pagename>.*)\",)?(\s*\[\"altTitles\"\] = \{(?P<altTitles>.*)\})?)?'''
@@ -49,36 +50,6 @@ runtime_options = ((RUNTIME_REGEX, RUNTIME_FORMAT),
                    (RUNTIME_2_REGEX, RUNTIME_2_FORMAT),
                    )
 
-ACTORS = [
-    # main cast
-    'Ashley Johnson',
-    'Laura Bailey',
-    "Liam O'Brien",
-    'Marisha Ray',
-    'Matthew Mercer',
-    'Sam Riegel',
-    'Taliesin Jaffe',
-    'Travis Willingham',
-
-    # guest stars
-    'Aabria Iyengar',
-    'Anjali Bhimani',
-    'Brennan Lee Mulligan',
-    'Dani Carr',
-    'Erika Ishii',
-    'Robbie Daymond',
-    'Christian Navarro',
-    'Emily Axford',
-    'Omar Najam',
-    'Utkarsh Ambudkar',
-    'Aimee Carrero',
-]
-SPEAKER_TAGS = [
-    'ASHLEY', 'LAURA', 'LIAM', 'MARISHA', 'MATT', 'SAM', 'TALIESIN', 'TRAVIS',
-    'ALL', 'AABRIA', 'ANJALI', 'BRENNAN', 'CHRISTIAN', 'DANI', 'ERIKA', 'ROBBIE',
-    'EMILY', 'OMAR', 'UTKARSH', 'AIMEE'
-]
-
 # Episode codes where the transcript will not be added (-transcript is auto-skipped)
 TRANSCRIPT_EXCLUSIONS = ['4SD', 'LVM2']
 
@@ -105,9 +76,30 @@ def join_array_on_and(str_iter):
         return_val = ', '.join([*str_iter[:-1], f'and {str_iter[-1]}'])
     return return_val
 
+@dataclass
+class ActorData(LuaReader):
+    '''Actor names and all relevant speaker tags.'''
+    module_name: str = 'ActorData'
+    json_filename: str = 'actors.json'
+
+    @property
+    def actor_names(self):
+        return [x[0] for x in self._json['actors']]
+
+    @property
+    def speaker_tags(self):
+        return [x[1] for x in self._json['actors']] + self._json['otherSpeakerTags']
+
+ACTOR_DATA = ActorData()
+# ACTORS = actor_data.actor_names
+# SPEAKER_TAGS = actor_data.speaker_tags
+
 class Actors:
-    def __init__(self, input_names, **kwargs):
+    def __init__(self, input_names, actor_data=None, **kwargs):
         self._input_names = input_names
+        self.actor_data = actor_data
+        if not self.actor_data:
+            self.actor_data = ACTOR_DATA
         self.link = kwargs.get('link', True)
         self.matched_only = kwargs.get('matched_only', True)
         self.link_unmatched = kwargs.get('link_unmatched', True)
@@ -125,14 +117,14 @@ class Actors:
             #skip joining words
             if actor.lower() in ['and', 'also']:
                 continue
-            candidates = [x for x in ACTORS if actor.lower() in x.lower()]
+            candidates = [x for x in self.actor_data.actor_names if actor.lower() in x.lower()]
             if len(candidates) == 1:
                 match = candidates[0]
             elif len(candidates) > 1:
                 if candidates:
                     pywikibot.output(f"Please clarify '{actor}': {candidates}")
                 else:
-                    pywikibot.output(f"No match for '{actor}'")
+                    pywikibot.output(f"ERROR: no match for '{actor}'")
                 continue
             elif self.matched_only:
                 pywikibot.output(f"'{actor}' did not match an actor. Check spelling and use actor's full name")
@@ -146,7 +138,7 @@ class Actors:
         if actor_list is None:
             actor_list = self.match_actors()
 #         matched_actors = [x for x in actor_list if x in ACTORS]
-        unmatched_actors = [x for x in actor_list if x not in ACTORS]
+        unmatched_actors = [x for x in actor_list if x not in self.actor_data.actor_names]
         actor_list = deepcopy(actor_list)
 
         for i, actor in enumerate(actor_list):

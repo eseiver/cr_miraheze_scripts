@@ -50,6 +50,8 @@ A number of maintenance activities can be performed together (-all) or independe
 
 -decoder          For forcing a re-download of Module:Ep/Decoder. Does not occur with -all
 
+-actor_data       For forcing a re-download of Module:ActorData. Does not occur with -all
+
 Use global -simulate option for test purposes. No changes to live wiki will be done.
 For every potential change, you will be shown a diff of the edit and asked to accept or reject it.
 No changes will be made automatically. Actions are skipped if change is not needed (e.g., an entry for
@@ -71,7 +73,7 @@ You will be prompted to enter a missing value if needed. No quotation marks need
 
 -runtime:         HH:MM:SS length of the episode video
 
--actors:          L-R of actors in thumbnail. Separate with ','. First names ok (from ACTORS list)
+-actors:          L-R of actors in thumbnail. Separate with ','. First names ok (from ActorData list)
 
 -episode_summary: The 1-2 line summary of the episode from the YouTube video.
 
@@ -644,7 +646,7 @@ class TranscriptBot(EpisodeBot):
     '''For creating the transcript page by downloading and processing youtube captions.'''
 
     def build_transcript(self):
-        ts = YoutubeTranscript(ep=self.opt.ep, yt=self.opt.yt)
+        ts = YoutubeTranscript(ep=self.opt.ep, yt=self.opt.yt, actor_data=ACTOR_DATA)
         ts.download_and_build_transcript()
         return ts
 
@@ -878,7 +880,7 @@ class AirdateBot(EpisodeBot):
         self.opt.airdate_dict = airdate_dict
 
         if ep.code not in text:
-            prev_ep = Ep(self.get_previously_aired_episode())
+            prev_ep = Ep(self.get_previously_aired_episode(), episode_decoder=EPISODE_DECODER)
             prev_entry = next(x for x in text.splitlines() if prev_ep.code in x)
             text = text.replace(prev_entry,
                                 '\n'.join([prev_entry, new_entry])
@@ -908,7 +910,8 @@ class Connect4SDBot(AirdateBot, EpArrayBot):
         else:
             affected_episodes = eps[(eps.index(prev_4SD.code)+1):]
         if restrict_c3:
-            affected_episodes = [x for x in affected_episodes if Ep(x).prefix == '3']
+            affected_episodes = [x for x in affected_episodes
+                                 if Ep(x, episode_decoder=EPISODE_DECODER).prefix == '3']
         affected_pages = ([array_dict['pagename'] if array_dict.get('pagename')
                            else array_dict['title'] for array_dict in array_dicts
                            if array_dict['epcode'] in affected_episodes])
@@ -1058,25 +1061,44 @@ def main(*args: str) -> None:
     # Process pagegenerators arguments
     local_args = gen_factory.handle_args(local_args)
 
-    # Parse script-specific command line arguments
+    # Parse args for downloading module data
     for arg in local_args:
         arg, _, value = arg.partition(':')
         option = arg[1:]
         if option == 'decoder':
             decoder = Decoder(force_download=True)
-            EPISODE_DECODER = decoder._json
+            # options['episode_decoder'] = decoder._json
             pywikibot.output("Episode decoder re-downloaded.")
+        elif option == 'actor_data':
+            ACTOR_DATA = ActorData(force_download=True)
+            # options['actors'] =  actor_data.actor_names
+            # options['speaker_tags'] = actor_data.speaker_tags
+            pywikibot.output("Actor data re-downloaded.")
+    if not 'decoder' in locals():
+        decoder = Decoder()
+    EPISODE_DECODER = decoder._json
+    EP_REGEX = Ep('1x01', episode_decoder=EPISODE_DECODER).ep_regex
+
+    if not 'ACTOR_DATA' in locals():
+        ACTOR_DATA = ActorData()
+
+    # Parse script-specific command line arguments
+    for arg in local_args:
+        arg, _, value = arg.partition(':')
+        option = arg[1:]
+        if option in ['actor_data', 'decoder']:
+            continue
         elif option in ['ep_id', 'ep']:
             value = get_validated_input(arg='ep', value=value, regex=EP_REGEX)
-            options['ep'] = Ep(value)
+            options['ep'] = Ep(value, episode_decoder=EPISODE_DECODER)
         elif option in ['yt_id', 'yt']:
             value = get_validated_input(arg=option, value=value, regex=YT_ID_REGEX)
             options['yt'] = YT(value)
         elif option in ['actors', 'host']:
             if option == 'actors':
-                options[option] = Actors(value)
+                options[option] = Actors(value, actor_data=ACTOR_DATA)
             elif option == 'host':
-                options[option] = Actors(value, link=False)
+                options[option] = Actors(value, link=False, actor_data=ACTOR_DATA)
         elif option == 'airdate':
             if re.search(DATE_2_REGEX, value):
                 pass
@@ -1126,13 +1148,14 @@ def main(*args: str) -> None:
                     options[req] = options['old_ep_name']
             elif req == 'actors' and any([options.get(x) for x in ['update_page', 'upload']]):
                 value = pywikibot.input(f"Optional: L-R actor order in {options['ep']} thumbnail (first names ok)")
-                options[req] = Actors(value)
+                options[req] = Actors(value, actor_data=ACTOR_DATA)
             elif req == 'runtime' and any([options.get(x) for x in ['update_page', 'ep_list', 'long_short']]):
                 value = get_validated_input(arg='runtime', regex='\d{1,2}:\d{1,2}(:\d{1,2})?', input_msg="Please enter video runtime (HH:MM:SS or MM:SS)")
                 options['runtime'] = value
             elif req == 'ep':
+                test_ep = Ep('1x01', episode_decoder=EPISODE_DECODER)
                 value = get_validated_input(arg=req, value=value, regex=EP_REGEX)
-                options['ep'] = Ep(value)
+                options['ep'] = Ep(value, episode_decoder=EPISODE_DECODER)
 
     # default new page name is same as new episode name (and page being parsed)
     if not options.get('new_page_name'):
@@ -1141,11 +1164,11 @@ def main(*args: str) -> None:
     # if 4SD, make sure host is provided. If one-shot, default host/DM/GM to Matt.
     if options['ep'].prefix == '4SD' and not options.get('host'):
         host = pywikibot.input(f"4-Sided Dive host for {options['ep'].code} (first name ok)")
-        options['host'] = Actors(host, link=False)
+        options['host'] = Actors(host, link=False, actor_data=ACTOR_DATA)
     if options['ep'].prefix == 'OS':
         host = next((options[x] for x in ['host', 'DM', 'GM', 'dm', 'gm']
             if options.get(x)), 'Matthew Mercer')
-        options['host'] = Actors(host, link=False)
+        options['host'] = Actors(host, link=False, actor_data=ACTOR_DATA)
 
     # if one-shot, default game system is D&D.
     if options['ep'].prefix == 'OS' and not options.get('game_system'):

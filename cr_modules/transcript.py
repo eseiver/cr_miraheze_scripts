@@ -6,7 +6,7 @@ import pywikibot
 from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound
 from youtube_transcript_api.formatters import JSONFormatter
 
-from .cr import wikify_html_string, SPEAKER_TAGS
+from .cr import wikify_html_string, ActorData
 
 BREAK_PHRASES = [
     'our break', "we'll take a break", 'go to break',
@@ -20,6 +20,7 @@ DURING_BREAK_PHRASES = [
     "chop it off. let's do it.", '(gale laughing) later, chudruckers!'
 ]
 
+actor_data = ActorData()
 
 def break_criteria_1(line, break_taken=False, during_break=False):
     '''Matt says they're taking a break'''
@@ -32,15 +33,14 @@ def break_criteria_1(line, break_taken=False, during_break=False):
         return False
 
 
-def break_criteria_2(line, break_taken=False, during_break=False):
+def break_criteria_2(line, break_taken=False, during_break=False, actor_data=actor_data):
     '''One of the speaker names appears capitalized'''
     if (not break_taken and not during_break and
-        any([''.join([x.capitalize(), ':']) in line for x in SPEAKER_TAGS
+        any([''.join([x.capitalize(), ':']) in line for x in actor_data.speaker_tags
             ])):
         return True
     else:
         return False
-SPEAKER_TAGS
 
 
 def break_criteria_3(line, break_taken=False, during_break=False):
@@ -122,6 +122,7 @@ class YoutubeTranscript:
         self.ignore_break = ignore_break
         self.ignore_duplicates = ignore_duplicates
         self.preserve_formatting = preserve_formatting
+        self.actor_data = actor_data
         self.dupe_lines = []
 
     def download_and_build_transcript(self):
@@ -238,7 +239,7 @@ class YoutubeTranscript:
                 active_quote = True
 
             # flag potential missing colon
-            if any([x in line for x in SPEAKER_TAGS]) and ':' not in line:
+            if any([x in line for x in self.actor_data.speaker_tags]) and ':' not in line:
                 line = '<!-- potential missing speaker tag -->' + line
 
             # this indicates a person is speaking (and thus a new line begins)
@@ -304,9 +305,9 @@ class YoutubeTranscript:
 
         # all uppercase words should be names in CR_UPPER
         try:
-            assert set(re.findall('[A-Z]+', transcript_names)).issubset(SPEAKER_TAGS)
+            assert set(re.findall('[A-Z]+', transcript_names)).issubset(self.actor_data.speaker_tags)
         except AssertionError:
-            names = [x for x in set(re.findall('[A-Z]+', transcript_names)) if x not in SPEAKER_TAGS]
+            names = [x for x in set(re.findall('[A-Z]+', transcript_names)) if x not in self.actor_data.speaker_tags]
             error_warning += f"Some speaker names potentially misspelled: {names}" + '\n'
 
         return error_warning
