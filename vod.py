@@ -997,10 +997,11 @@ class LongShortBot(EpisodeBot):
         is_longest = False
         longest = next(x for x in wikicode.get_sections() if any([
             y.title.matches('Longest episodes') for y in x.filter_headings()]))
+        longest_overall = longest.get_sections(flat=True)[1]
         relevant_section = next((section for section in longest.get_sections(flat=True)[2:]
                         if ep.show.lower() in section.filter_headings()[0].title.lower()),
                        '')
-        for section in [relevant_section, longest]:
+        for section in [relevant_section, longest_overall]:
             if not section:
                 continue
             h = section.filter_headings()[0]
@@ -1022,6 +1023,9 @@ class LongShortBot(EpisodeBot):
         shortest = next(x for x in wikicode.get_sections() if any(
             [y.title.matches('Shortest episodes') for y in x.filter_headings()]))
         shortest_overall = shortest.get_sections(flat=True)[1]
+        # for one-shots and miniseries, don't compare to campaign-only table
+        if not ep.is_campaign:
+            shortest_overall = mwparserfromhell.parse(shortest_overall.split('Shortest episodes, exclud')[0])
         relevant_section = next((section for section in shortest.get_sections(flat=True)[2:]
                                 if ep.show.lower() in section.filter_headings()[0].title.lower()),
                                '')
