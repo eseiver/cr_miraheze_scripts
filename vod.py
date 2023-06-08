@@ -801,7 +801,6 @@ class NavboxBot(EpisodeBot):
         self.current_page = pywikibot.Page(self.site, navbox_name)
         wikicode = self.get_wikicode()
         if any([x in str(wikicode) for x in [wiki_ep, wiki_noshow]]):
-            print(wiki_noshow not in wikicode, 'OK!')
             navbox = get_navbox(wikicode)
             navbox_list = select_navbox_list(navbox, item = self.display_ep)
             add_to_wiki_list(wiki_ep, navbox_list)
