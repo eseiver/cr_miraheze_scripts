@@ -181,7 +181,10 @@ class Ep:
 
     @property
     def navbox_name(self):
-        return self.episode_decoder[self.prefix].get('navbox', '')
+        navbox = (self.episode_decoder[self.prefix]['navbox']
+                  if self.episode_decoder[self.prefix].get('navbox')
+                  else f"Nav-{self.prefix}")
+        return navbox
 
     @property
     def transcript_category(self):

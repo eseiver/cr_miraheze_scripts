@@ -524,7 +524,7 @@ class YTSwitcherBot(EpisodeBot):
             text = re.sub(fr'["{ep.code}"]\s*=.*', fr'["{ep.code}"] = "{yt.url}",', text)
 
         # if previous episode is already there, append after it
-        elif prev_ep.code in text:
+        elif prev_ep and prev_ep.code in text:
             prev_entry = next(x for x in text.splitlines()
                 if any([y in x for y in prev_ep.generate_equivalent_codes()]))
             new_entry = f'    ["{ep.code}"]  = "{yt.url}",'
@@ -684,7 +684,9 @@ class TranscriptListBot(EpisodeBot):
             # if previous episode isn't there, search episode num - 1 until find one (otherwise none)
             while prev_ep and (prev_ep.code not in text):
                 prev_ep = prev_ep.get_previous_episode(prev_ep.code)
-            prev_ep_entry = next((x for x in text.splitlines() if prev_ep.code in x), '== Miscellaneous ==')
+            prev_ep_entry = next((x for x in text.splitlines()
+                                  if prev_ep and prev_ep.code in x),
+                                 '== Miscellaneous ==')
             text = text.replace(prev_ep_entry,
                                 '\n'.join([prev_ep_entry, ep_entry]))
 
@@ -794,10 +796,12 @@ class NavboxBot(EpisodeBot):
     def treat_page(self):
         navbox_name = f'Template:{self.opt.ep.navbox_name}'
         wiki_ep = self.opt.ep.wiki_code
+        wiki_noshow = self.opt.ep.wiki_noshow
 
         self.current_page = pywikibot.Page(self.site, navbox_name)
         wikicode = self.get_wikicode()
-        if wiki_ep not in str(wikicode):
+        if any([x in str(wikicode) for x in [wiki_ep, wiki_noshow]]):
+            print(wiki_noshow not in wikicode, 'OK!')
             navbox = get_navbox(wikicode)
             navbox_list = select_navbox_list(navbox, item = self.display_ep)
             add_to_wiki_list(wiki_ep, navbox_list)
@@ -1073,7 +1077,7 @@ def main(*args: str) -> None:
             decoder = Decoder(force_download=True)
             # options['episode_decoder'] = decoder._json
             pywikibot.output("Episode decoder re-downloaded.")
-        elif option == 'actor_data':
+        if option in ['actor_data', 'download_data']:
             ACTOR_DATA = ActorData(force_download=True)
             # options['actors'] =  actor_data.actor_names
             # options['speaker_tags'] = actor_data.speaker_tags
