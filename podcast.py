@@ -134,7 +134,7 @@ class PodcastBot(SingleSiteBot, ExistingPageBot):
             text = re.sub(fr'\["{ep.code}"\]\s*=.*', fr'["{ep.code}"] = "{url}",', text)
 
         # if previous episode is already there, append after it
-        elif prev_ep.code in text:
+        elif prev_ep and prev_ep.code in text:
             prev_entry = next(x for x in text.splitlines()
                 if any([y in x for y in prev_ep.generate_equivalent_codes()]))
             new_entry = f'    ["{ep.code}"] = "{url}",'
