@@ -601,7 +601,8 @@ class EpListBot(EpisodeBot):
             prev_ep = prev_ep.get_previous_episode(prev_ep.code)
 
         # create new table entry from scratch if it doesn't exist yet, inserting after previous episode
-        if not re.search(fr'\|\s*ep\s*=\s*{{{{(E|e)p\|(noshow=1\|)?{ep.code}}}}}', text):
+        if not any([ep.code in str(x) for x in wikicode.filter_templates()
+                    if x.name.matches('ep')]):
             ep_entry = self.build_episode_entry()
             previous_entry_wiki = next((x for x in wikicode.filter_templates()
                 if x.name.matches('Episode table entry') and prev_ep.code in x['ep']), '')
@@ -795,14 +796,19 @@ class NavboxBot(EpisodeBot):
 
     def treat_page(self):
         navbox_name = f'Template:{self.opt.ep.navbox_name}'
-        wiki_ep = self.opt.ep.wiki_code
-        wiki_noshow = self.opt.ep.wiki_noshow
+        ep = self.opt.ep
 
         self.current_page = pywikibot.Page(self.site, navbox_name)
         wikicode = self.get_wikicode()
-        if not any([x in str(wikicode) for x in [wiki_ep, wiki_noshow]]):
+
+        if not any([ep.code in str(x) for x in wikicode.filter_templates()
+                    if x.name.matches('ep')]):
             navbox = get_navbox(wikicode)
             navbox_list = select_navbox_list(navbox, item = self.display_ep)
+            if ep.prefix == '4SD':
+                wiki_ep = ep.wiki_noshow
+            else:
+                wiki_ep = ep.wiki_code
             add_to_wiki_list(wiki_ep, navbox_list)
 
         self.put_current(
