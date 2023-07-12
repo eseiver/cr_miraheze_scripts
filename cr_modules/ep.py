@@ -172,6 +172,23 @@ class Ep:
         return self.episode_decoder[self.prefix]['title']
 
     @property
+    def season(self):
+        season = ''
+        if self.episode_decoder[self.prefix].get('seasons'):
+            assert self.full_prefix[-1].isdigit()
+            season = self.full_prefix[-1]
+        return season
+
+    @property
+    def season_name(self):
+        season_name = ''
+        if self.season:
+            season_name = self.episode_decoder[self.prefix]['seasons'][self.season]['page']
+            if not season_name:
+                season_name = f"Season {self.season}"
+        return season_name
+
+    @property
     def list_page(self):
         return self.episode_decoder[self.prefix].get('listLink', self.show)
 
