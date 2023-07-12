@@ -202,7 +202,7 @@ class Ep:
 
     @property
     def wiki_noshow(self):
-        wiki = f'{{{{ep|noshow=1|{self.code}}}}}'
+        wiki = f'{{{{ep|{self.code}|noshow=true}}}}'
         return wiki
 
     @property
