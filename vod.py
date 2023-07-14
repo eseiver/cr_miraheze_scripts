@@ -280,6 +280,28 @@ class EpisodeBot(
         old_ep_name = self.opt.old_ep_name
         self.current_page = pywikibot.Page(self.site, old_ep_name)
         wikicode = deepcopy(self.get_wikicode())
+
+        # prepend short description
+        # don't add if already exists
+        shortdesc = ''
+        if any(x.name.matches("short description") for x in wikicode.filter_templates()):
+            pass
+        elif ep.shortdesc:
+            pywikibot.output(ep.shortdesc)
+            answer = pywikibot.input("Hit enter to accept automatic short description or write your own:")
+            if answer:
+                shortdesc = answer
+            else:
+                shortdesc = ep.shortdesc
+        else:
+            write_shortdesc = pywikibot.input_yn("No short description auto-generated. Write one?")
+            if write_shortdesc:
+                shortdesc = pywikibot.input("Please write the short description (no template code required)")
+        if shortdesc and '{{short description' not in shortdesc:
+            shortdesc = f"{{{{shortdescription|{shortdesc}}}}}"
+
+
+        # handle infobox
         infobox = self.get_infobox(wikicode=wikicode)
 
         infobox['VOD'] = ep.wiki_vod
@@ -335,7 +357,7 @@ class EpisodeBot(
         if self.opt.episode_summary:
             wikicode = self.update_summary(wikicode=wikicode)
 
-        text = str(wikicode)
+        text = '\n'.join([shortdesc, str(wikicode)]) if shortdesc else str(wikicode)
 
         if self.opt.update_page:
             self.put_current(text, summary=self.opt.summary)
