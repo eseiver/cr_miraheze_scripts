@@ -284,10 +284,22 @@ class EpisodeBot(
         # prepend short description
         # don't add if already exists
         shortdesc = ''
+
         if any(x.name.matches("short description") for x in wikicode.filter_templates()):
-            pass
+            pywikibot.output("Short description already on episode page; creation skipped.")
         elif ep.shortdesc:
-            pywikibot.output(ep.shortdesc)
+            # if one-shot in the episode title, no shortdesc is needed
+            if ep.prefix == 'OS' and any(
+                any(
+                    target.lower() in value.lower()
+                    for target in ['one-shot', 'one shot']
+                )
+                for value in [old_ep_name, self.opt.new_ep_name]
+            ):
+                shortdesc = '{{short description|none}}'
+            else:
+                shortdesc = ep.shortdesc
+            pywikibot.output(shortdesc)
             answer = pywikibot.input("Hit enter to accept automatic short description or write your own:")
             if answer:
                 shortdesc = answer
@@ -297,7 +309,7 @@ class EpisodeBot(
             write_shortdesc = pywikibot.input_yn("No short description auto-generated. Write one?")
             if write_shortdesc:
                 shortdesc = pywikibot.input("Please write the short description (no template code required)")
-        if shortdesc and '{{short description' not in shortdesc:
+        if shortdesc and '{{short description' not in shortdesc.lower():
             shortdesc = f"{{{{shortdescription|{shortdesc}}}}}"
 
 
