@@ -255,6 +255,46 @@ class Ep:
         return words
 
     @property
+    def shortdesc(self):
+        '''For building a short description to prepend to article.'''
+        shortdesc = ''
+        if self.show in ['Bits and bobs', 'Midst']:
+            return shortdesc
+
+        if self.ce_words:
+            shortdesc += self.ce_words
+        elif self.prefix == 'OS':
+            shortdesc += 'One-shot episode'
+        # italics do not display in this view
+        # elif self.episode_decoder[self.prefix].get('italics'):
+        #     shortdesc += f"''{self.show}''"
+        elif self.show in ['Talks Machina', 'UnDeadwood']:
+            shortdesc += 'none'
+        else:
+            shortdesc += self.show
+
+        if self.season_name:
+            shortdesc += f", {self.season_name}"
+
+        # Handle Exandria Unlimited separately
+        if self.prefix == 'E':
+            if self.season == '1':
+                shortdesc = "Exandria Unlimited Prime"
+            elif self.season == '2':
+                shortdesc = "none"
+            elif self.season == '3':
+                shortdesc =  "Exandria Unlimited: Calamity"
+            else:
+                raise
+
+        if self.prefix not in ['OS'] and not self.is_campaign and shortdesc != "none":
+            shortdesc += f" Episode {self.number}"
+
+        if shortdesc:
+            shortdesc = f"{{{{short description|{shortdesc}}}}}"
+        return shortdesc
+
+    @property
     def wiki_vod(self):
         vod = f"{{{{Ep/YTURLSwitcher|ep={self.code}}}}}"
         return vod
