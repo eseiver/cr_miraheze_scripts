@@ -255,8 +255,9 @@ class Ep:
         return words
 
     @property
-    def shortdesc(self):
-        '''For building a short description to prepend to article.'''
+    def shortdesc_value(self):
+        '''For building a short description to prepend to article.
+        Italics do not display in this view.'''
         shortdesc = ''
         if self.show in ['Bits and bobs', 'Midst']:
             return shortdesc
@@ -265,9 +266,6 @@ class Ep:
             shortdesc += self.ce_words
         elif self.prefix == 'OS':
             shortdesc += 'One-shot episode'
-        # italics do not display in this view
-        # elif self.episode_decoder[self.prefix].get('italics'):
-        #     shortdesc += f"''{self.show}''"
         elif self.show in ['Talks Machina', 'UnDeadwood']:
             shortdesc += 'none'
         else:
@@ -289,9 +287,14 @@ class Ep:
 
         if self.prefix not in ['OS'] and not self.is_campaign and shortdesc != "none":
             shortdesc += f" Episode {self.number}"
+        return shortdesc
 
-        if shortdesc:
-            shortdesc = f"{{{{short description|{shortdesc}}}}}"
+    @property
+    def shortdesc(self):
+        '''Wrap short description in the appropriate wiki template markup.'''
+        shortdesc = ''
+        if self.shortdesc_value:
+            shortdesc = f"{{{{short description|{self.shortdesc_value}}}}}"
         return shortdesc
 
     @property

@@ -283,11 +283,15 @@ class EpisodeBot(
 
         # prepend short description
         # don't add if already exists
-        shortdesc = ''
+        shortdesc = next((x for x in wikicode.filter_templates()
+                          if x.name.matches("short description")),
+                         '')
+        shortdesc_value = ''
 
-        if any(x.name.matches("short description") for x in wikicode.filter_templates()):
+        if (isinstance(shortdesc, mwparserfromhell.wikicode.Template) and
+            shortdesc[1].strip() != 'Campaign 3 Episode x'):
             pywikibot.output("Short description already on episode page; creation skipped.")
-        elif ep.shortdesc:
+        elif ep.shortdesc_value:
             # if one-shot in the episode title, no shortdesc is needed
             if ep.prefix == 'OS' and any(
                 any(
@@ -296,21 +300,19 @@ class EpisodeBot(
                 )
                 for value in [old_ep_name, self.opt.new_ep_name]
             ):
-                shortdesc = '{{short description|none}}'
+                shortdesc_value = 'none'
             else:
-                shortdesc = ep.shortdesc
-            pywikibot.output(shortdesc)
+                shortdesc_value = ep.shortdesc_value
+            pywikibot.output(shortdesc_value)
             answer = pywikibot.input("Hit enter to accept automatic short description or write your own:")
             if answer:
-                shortdesc = answer
+                shortdesc_value = answer
             else:
-                shortdesc = ep.shortdesc
+                pass
         else:
             write_shortdesc = pywikibot.input_yn("No short description auto-generated. Write one?")
             if write_shortdesc:
-                shortdesc = pywikibot.input("Please write the short description (no template code required)")
-        if shortdesc and '{{short description' not in shortdesc.lower():
-            shortdesc = f"{{{{shortdescription|{shortdesc}}}}}"
+                shortdesc_value = pywikibot.input("Please write the short description (no template info)")
 
 
         # handle infobox
@@ -369,7 +371,14 @@ class EpisodeBot(
         if self.opt.episode_summary:
             wikicode = self.update_summary(wikicode=wikicode)
 
-        text = '\n'.join([shortdesc, str(wikicode)]) if shortdesc else str(wikicode)
+        if (shortdesc and shortdesc_value):
+            shortdesc.value = shortdesc_value.strip()
+            text = str(wikicode)
+        elif shortdesc_value:
+            shortdesc = f"{{{{short description|{shortdesc_value}}}}}"
+            text = '\n'.join([str(shortdesc), str(wikicode)])
+        else:
+            text = str(wikicode)
 
         if self.opt.update_page:
             self.put_current(text, summary=self.opt.summary)
