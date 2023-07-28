@@ -6,7 +6,7 @@ import pywikibot
 from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound
 from youtube_transcript_api.formatters import JSONFormatter
 
-from .cr import wikify_html_string, ActorData
+from .cr import wikify_html_string, ActorData, Ep
 
 BREAK_PHRASES = [
     'our break', "we'll take a break", 'go to break',
@@ -56,6 +56,7 @@ def break_criteria_3(line, break_taken=False, during_break=False):
 class Breakfinder:
     '''Take a compiled transcript and comment out the break section.'''
     transcript: str = ''
+    ep: Ep = ''
     break_found: bool = False
 
     def __post_init__(self):
@@ -342,7 +343,7 @@ class YoutubeTranscript:
 
         # Step 3: Comment out the break
         if not self.ignore_break:
-            ts = Breakfinder(transcript=ts).revised_transcript
+            ts = Breakfinder(transcript=ts, ep=self.ep).revised_transcript
 
         # Step 4: add commented_out error messages to top of transcript
         ts = self.process_errors(ts)
