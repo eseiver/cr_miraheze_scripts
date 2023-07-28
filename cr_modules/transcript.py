@@ -64,8 +64,15 @@ class Breakfinder:
             self.revised_transcript = self.find_break(break_function=break_criteria_2)
         if not self.break_found:
             self.revised_transcript = self.find_break(break_function=break_criteria_3)
-        assert (self.revised_transcript == self.transcript or
-            'BREAK ENDS' in self.revised_transcript), 'End of break not detected'
+        try:
+            assert self.revised_transcript == self.transcript or 'BREAK ENDS' in self.revised_transcript, 'End of break not detected'
+        except AssertionError as e:
+            if self.ep.prefix in ['M'] and self.transcript != self.revised_transcript:
+                self.revised_transcript = self.transcript  # Discard the revised version, assume has no break
+                pywikibot.output(f'Break not detected for {self.ep.code} transcript')
+            else:
+                # important that there is not a hanging beginning of comment without the end
+                raise e
 
     def find_break(self, break_function=None):
         if self.break_found:
