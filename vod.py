@@ -514,7 +514,14 @@ class EpArrayBot(EpisodeBot):
 
     def update_new_dict(self, new_dict, current_dict):
         '''Add the existing altTitles together, but assume new_dict is otherwise correct.'''
-        new_dict['altTitles'] = list(dict.fromkeys(new_dict['altTitles'] + current_dict.get('altTitles')))
+
+        # Get the 'altTitles' lists from both dictionaries (default to empty lists if the key does not exist)
+        new_alt_titles = new_dict.get('altTitles', [])
+        current_alt_titles = current_dict.get('altTitles', [])
+
+        # Merge the altTitles lists and remove duplicates
+        new_dict['altTitles'] = list(dict.fromkeys(new_alt_titles + current_alt_titles))
+
         return new_dict
 
     def treat_page(self):
@@ -641,7 +648,7 @@ class EpListBot(EpisodeBot):
         text = str(wikicode)
         # if previous episode isn't there, search episode num - 1 until find one (otherwise none)
         while prev_ep and (prev_ep.code.lower() not in text.lower()):
-            prev_ep = prev_ep.get_previous_episode(prev_ep.code)
+            prev_ep = prev_ep.get_previous_episode()
 
         # create new table entry from scratch if it doesn't exist yet, inserting after previous episode
         if not any([ep.code in str(x) for x in wikicode.filter_templates()
@@ -727,7 +734,7 @@ class TranscriptListBot(EpisodeBot):
             prev_ep = ep.get_previous_episode()
             # if previous episode isn't there, search episode num - 1 until find one (otherwise none)
             while prev_ep and (prev_ep.code not in text):
-                prev_ep = prev_ep.get_previous_episode(prev_ep.code)
+                prev_ep = prev_ep.get_previous_episode()
             prev_ep_entry = next((x for x in text.splitlines()
                                   if prev_ep and prev_ep.code in x),
                                  '== Miscellaneous ==')
