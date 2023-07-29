@@ -345,10 +345,15 @@ class YoutubeTranscript:
         if not self.ignore_break:
             ts = Breakfinder(transcript=ts, ep=self.ep).revised_transcript
 
-        # Step 4: add commented_out error messages to top of transcript
+        # Step 4: Add cleanup tag if no speaker tags found
+        if not any(tag in ts for tag in self.actor_data.speaker_tags):
+            ts = f'{{{{cleanup|speaker tags not found}}}}\n\n{ts}'
+            pywikibot.output("No speaker tags found in transcript; tagged for cleanup.")
+
+        # Step 5: add commented_out error messages to top of transcript
         ts = self.process_errors(ts)
 
-        # Step 5: add navigation and category
+        # Step 6: add navigation and category
         t_cat = f"Category:{self.ep.transcript_category}"
         ts = ''.join(['{{Transcript-Nav}}\n__FORCETOC__\n\n', 
                       ts,
