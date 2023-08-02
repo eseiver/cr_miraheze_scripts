@@ -40,8 +40,6 @@ A number of maintenance activities can be performed together (-all) or independe
 
 -long_short       Check whether the runtime for the episode is one of the longest or shortest
 
--main_page        Check to see if the latest episode image on the main page needs updating
-
 -redirects        Make sure episode code redirect(s) exist and link to newest episode name
 
 -navbox           Make sure the episode code is in the navbox, as determined from Module:Ep/Decoder
@@ -98,8 +96,7 @@ can be found in `update_options` for EpisodeBot (line 804).
 
 Potential future features:
 1) Make sure that the episode has been removed from upcoming events
-2) Update the episode on the main page
-3) Pull YouTube info automatically using the YouTube API
+2) Pull YouTube info automatically using the YouTube API
 
 This script is a
 :py:obj:`ConfigParserBot <pywikibot.bot.ConfigParserBot>`. All settings can be
@@ -167,7 +164,6 @@ class EpisodeBot(
         'update_page': None,  # update the contents of the episode page (may still need to access for info)
         'move': None,  # move page (only if new page name exists & is different from old one)
         'upload': None,  # upload the YouTube video thumbnail
-        'main_page': None,  # check the main page has the latest thumbnail
         'long_short': None, # check whether runtime is one of longest or shortest
         'ep_list': None,  # add to/update list of episodes
         'airdate_order': None,  # add to/update the airdate order
@@ -1002,39 +998,6 @@ class Connect4SDBot(AirdateBot, EpArrayBot):
             self.update_episode_page()
 
 
-class MainPageBot(AirdateBot, EpArrayBot):
-    '''For checking that the articles are the latest on the main page
-    NOTE: Depends on airdate module to determine latest episode
-    '''
-    def check_for_latest_episodes(self, latest_episodes, text):
-        pass
-
-    def treat_page(self):
-        # self.get_needed_dicts()
-        # airdate_dict = self.get_airdate_dict()
-        array_dicts = self.get_array_dicts()
-        latest_episodes = self.get_latest_episodes_by_type()
-        self.current_page = pywikibot.Page(self.site, 'Main Page')
-        text = self.current_page.text
-        all_ok = True
-        for ep in latest_episodes:
-            valid_ep = next(x for x in array_dicts
-                if x['epcode'].lower() == ep.code.lower())
-            valid_codes = [valid_ep['title'], valid_ep['epcode']]
-            if valid_ep.get('pagename'):
-                valid_codes.append(valid_ep['pagename'])
-            if valid_ep.get('alt_titles'):
-                valid_codes += valid_ep['alt_titles']
-            if any([x for x in valid_codes if x.lower() in text.lower()]):
-                pass
-            else:
-                all_ok = False
-                pywikibot.output(f"Latest episode of {ep.show} missing from main page: <<yellow>>{ep.code}<<default>>")
-
-        if all_ok:
-            pywikibot.output(f'All latest episodes {latest_episodes} already on main page')
-
-
 class LongShortBot(EpisodeBot):
     '''For checking whether the runtime of an episode is one of the longest or shortest'''
 
@@ -1192,7 +1155,7 @@ def main(*args: str) -> None:
 
     # handle which things to run if all is selected, and set to False any not yet defined
     for task in ['update_page', 'move', 'upload', 'ep_list', 'yt_switcher', 'ep_array',
-                 'main_page', 'airdate_order', 'transcript', 'transcript_list', 'redirects',
+                 'airdate_order', 'transcript', 'transcript_list', 'redirects',
                  'navbox', '4SD', 'long_short']:
         if options.get('all'):
             options[task] = True
@@ -1381,16 +1344,12 @@ def main(*args: str) -> None:
                 bot11 = TranscriptListBot(generator=gen, **options)
                 bot11.treat_page()
 
-        if options.get('main_page'):
-            bot12 = MainPageBot(generator=gen, **options)
-            bot12.treat_page()
-
         if options.get('long_short'):
             if options['ep'].prefix == '4SD':
                 pywikibot.output(f'\nSkipping longest/shortest for {options["ep"].show} episode')
             else:
-                bot13 = LongShortBot(generator=gen, **options)
-                bot13.treat_page()
+                bot12 = LongShortBot(generator=gen, **options)
+                bot12.treat_page()
 
 
 if __name__ == '__main__':
