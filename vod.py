@@ -545,10 +545,11 @@ class EpArrayBot(EpisodeBot):
         new_dict = self.build_new_array_dict()
         new_dict = self.update_new_dict(new_dict, current_dict)
 
-        # Make sure that for 3xNN episode codes it is also "c3 latest"
-        if ep.prefix == '3' and 'c3 latest' not in new_dict['altTitles']:
-            text = re.sub('c3 latest(, )?', '', text)
-            new_dict['altTitles'].append('c3 latest')
+        # Make sure that for relevant episode codes it is also the latest
+        latest = ep.latest
+        if latest and latest not in new_dict['altTitles']:
+            text = re.sub(fr'{latest}(, )?', '', text)
+            new_dict['altTitles'].append(latest)
 
         new_entry = self.dict_to_entry(new_dict)
 

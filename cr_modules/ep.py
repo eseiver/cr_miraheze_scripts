@@ -197,6 +197,11 @@ class Ep:
         return self.episode_decoder[self.prefix].get('thumbnailCategory', 'Episode thumbnails')
 
     @property
+    def latest(self):
+        '''The name in Module:Ep/Array that denotes the latest episode for this show'''
+        return self.episode_decoder[self.prefix].get('latest')
+
+    @property
     def navbox_name(self):
         navbox = (self.episode_decoder[self.prefix]['navbox']
                   if self.episode_decoder[self.prefix].get('navbox')
