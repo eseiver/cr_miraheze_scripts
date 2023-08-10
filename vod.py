@@ -849,11 +849,11 @@ class NavboxBot(EpisodeBot):
         self.current_page = pywikibot.Page(self.site, navbox_name)
         wikicode = self.get_wikicode()
 
-        if not any([ep.code in str(x) for x in wikicode.filter_templates()
+        if not any([ep.code.lower() in str(x).lower() for x in wikicode.filter_templates()
                     if x.name.matches('ep')]):
             navbox = get_navbox(wikicode)
             navbox_list = select_navbox_list(navbox, item = self.display_ep)
-            if ep.prefix == '4SD':
+            if ep.prefix in ['4SD', 'CO']:
                 wiki_ep = ep.wiki_noshow
             else:
                 wiki_ep = ep.wiki_code
