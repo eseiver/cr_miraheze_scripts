@@ -85,6 +85,8 @@ You will be prompted to enter a missing value if needed. No quotation marks need
 
 -new_page_name:   Only if page name differs from new_ep_name (usually 'A' vs 'A (episode)')
 
+-image_name:      The name of the thumbnail image file to upload. Automatic and shouldn't be needed.
+
 -summary:         A pywikibot command that adds an edit summary message and shouldn't be needed.
 
 -host:            Actor who is the 4SD host or running one-shot (DM, GM also work here)
@@ -1141,7 +1143,8 @@ def main(*args: str) -> None:
             options['airdate'] = Airdate(value)
         elif option == 'airtime':
             options['airtime'] = Airdate(value)
-        elif option in ('summary', 'actors', 'runtime', 'new_ep_name', 'episode_summary'):
+        elif option in (
+            'summary', 'actors', 'runtime', 'new_ep_name', 'episode_summary', 'image_name'):
             if not value:
                 value = pywikibot.input('Please enter a value for ' + arg)
             options[option] = value
@@ -1168,7 +1171,7 @@ def main(*args: str) -> None:
     required_options = ['ep', 'yt', 'new_ep_name', 'runtime', 'actors']
     for req in required_options:
         if req not in options:
-            if req == 'yt' and any([options.get(x) for x in ['update_page', 'ep_list', 'yt_list', 'transcript']]):
+            if req == 'yt' and any([options.get(x) for x in ['update_page', 'ep_list', 'yt_list', 'transcript', 'upload']]):
                 value = get_validated_input(arg='yt', regex=YT_ID_REGEX, input_msg="Please enter 11-digit YouTube ID for the video")
                 options[req] = YT(value)
             elif req == 'new_ep_name':
@@ -1251,7 +1254,10 @@ def main(*args: str) -> None:
                                                       actors=options.get('actors'),
                                                       )
             summary = f"{options['ep'].code} episode thumbnail (uploaded via pywikibot)"
-            filename = options['ep'].image_filename
+            if options.get('image_name'):
+                filename = options['image_name']
+            else:
+                filename = options['ep'].image_filename
             thumbnail_url = select_thumbnail_url(options['yt'])
             if thumbnail_url:
                 thumbnail_bot = UploadRobot(
