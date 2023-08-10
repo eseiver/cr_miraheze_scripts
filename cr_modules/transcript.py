@@ -304,6 +304,10 @@ class YoutubeTranscript:
         error_warning = ''
         transcript_names = ' '.join([x.split(':')[0] for x in transcript.splitlines() if ':' in x])
 
+        # don't check names if there are no standard ones to begin with
+        if not any(tag in transcript for tag in self.actor_data.speaker_tags):
+            return
+
         # the only lowercase word before the colon should be 'and'
         try:
             assert set(re.findall('[a-z]+', transcript_names)) == {'and'}
@@ -315,7 +319,8 @@ class YoutubeTranscript:
         try:
             assert set(re.findall('[A-Z]+', transcript_names)).issubset(self.actor_data.speaker_tags)
         except AssertionError:
-            names = [x for x in set(re.findall('[A-Z]+', transcript_names)) if x not in self.actor_data.speaker_tags]
+            names = [x for x in set(re.findall('[A-Z]+', transcript_names))
+                     if x not in self.actor_data.speaker_tags]
             error_warning += f"Some speaker names potentially misspelled: {names}" + '\n'
 
         return error_warning
