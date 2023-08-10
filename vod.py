@@ -652,7 +652,8 @@ class EpListBot(EpisodeBot):
                     if x.name.matches('ep')]):
             ep_entry = self.build_episode_entry()
             previous_entry_wiki = next((x for x in wikicode.filter_templates()
-                if x.name.matches('Episode table entry') and prev_ep.code in x['ep']), '')
+                if x.has_param('ep') and x.name.matches('Episode table entry') and
+                prev_ep.code in x['ep']), '')
             if previous_entry_wiki:
                 previous_entry = ''.join(['|' + str(x) for x in previous_entry_wiki.params]) + '}}'
                 if previous_entry in text:
@@ -671,7 +672,7 @@ class EpListBot(EpisodeBot):
         else:
             ep_entry_dict = self.build_episode_entry_dict()
             existing_entry = next(x for x in wikicode.filter_templates()
-                if x.name.matches('Episode table entry') and ep.code in x['ep'])
+                if x.has_param('ep') and x.name.matches('Episode table entry') and ep.code in x['ep'])
             for k, v in ep_entry_dict.items():
                 if v and not (existing_entry.has_param(k) and existing_entry[k].value.strip() == v):
                     if len(str(v).strip()):
