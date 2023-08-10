@@ -306,7 +306,7 @@ class YoutubeTranscript:
 
         # don't check names if there are no standard ones to begin with
         if not any(tag in transcript for tag in self.actor_data.speaker_tags):
-            return
+            return ''
 
         # the only lowercase word before the colon should be 'and'
         try:
