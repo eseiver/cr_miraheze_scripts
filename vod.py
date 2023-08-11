@@ -527,7 +527,7 @@ class EpArrayBot(EpisodeBot):
         text = self.current_page.text
         ep = self.opt.ep
 
-        current_entry = next((x for x in re.split('\n    \},\n',
+        current_entry = next((x for x in re.split('\n\s+\},\n',
                             text) if re.search(f'\["{ep.code}"\]', x)),
                             '')
         if current_entry:
@@ -535,7 +535,7 @@ class EpArrayBot(EpisodeBot):
             array_dicts = self.get_array_dicts()
             current_dict = self.get_current_dict(array_dicts=array_dicts)
         else:
-            prev_entry = next((x for x in re.split('\n    \},\n',
+            prev_entry = next((x for x in re.split('\n\s+\},\n',
                             text) if re.search(f'\["{ep.get_previous_episode().code}"\]', x)),
                             '') + '\n    },\n'
             current_dict = {}
