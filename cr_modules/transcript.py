@@ -226,7 +226,10 @@ class YoutubeTranscript:
         for i, line in enumerate(preprocessed_lines):
 
             # ignore the intro song (with predictable beginning and end), add Part I header
-            if "♪ Critical (It's Thursday)" in line and not during_intro and not intro_done:
+            if (not during_intro and
+                not intro_done and
+                (re.search("♪ Critical\s+\(It's Thursday\)", line)) or
+                line.strip() == "ALL: ♪ Critical"):
                 during_intro = True
                 continue
             elif during_intro and any([x in line.lower() for x in ['(flames', 'welcome back']]):
