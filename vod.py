@@ -360,7 +360,6 @@ class EpisodeBot(
                 file_value = image_value
             file = pywikibot.Page(self.site, file_value)
             if file.exists():
-                print('file VALUE!!', file_value)
                 pywikibot.output(f"Existing page '{file_value}' in image field; skipping thumbnail upload")
                 self.opt.upload = False
             elif image_value and not self.opt.image_name:
