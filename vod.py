@@ -350,11 +350,27 @@ class EpisodeBot(
         else:
             self.opt.airtime = ""
 
-        # if image field is already filled in beyond comments, cancel thumbnail procedure
+        # if image field is filled in with existing file, cancel thumbnail procedure
+        # otherwise, use image_name if entered 
         if does_value_exist(infobox, param_name='Image') and self.opt.upload:
-            pywikibot.output(f"Value '{(remove_comments(infobox['Image'].value)).strip()}' in image field detected; thumbnail will not be uploaded")
-            self.opt.upload = False
-        elif self.opt.image_name:
+            image_value = (remove_comments(infobox['Image'].value)).strip()
+            if image_value and 'file' not in image_value.lower():
+                file_value = 'File:' + image_value
+            else:
+                file_value = image_value
+            file = pywikibot.Page(self.site, file_value)
+            if file.exists():
+                print('file VALUE!!', file_value)
+                pywikibot.output(f"Existing page '{file_value}' in image field; skipping thumbnail upload")
+                self.opt.upload = False
+            elif image_value and not self.opt.image_name:
+                image_value = image_value.replace('File:', '')
+                self.opt.image_name = image_value
+            if image_value and image_value != self.opt.image_name:
+                pywikibot.output(
+                    f'Infobox image {image_value} does not match entered {self.opt.image_name}. Please resolve and try again.')
+                sys.exit()
+        if self.opt.image_name and not does_value_exist(infobox, param_name='Image'):
             infobox['Image'] = ' ' + self.opt.image_name.lstrip()
         else:
             infobox['Image'] = ' ' + ep.image_filename
