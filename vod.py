@@ -542,6 +542,9 @@ class EpArrayBot(EpisodeBot):
         text = self.current_page.text
         ep = self.opt.ep
 
+        # Replace tabs with 4 spaces
+        text = text.replace('\t', '    ')
+
         current_entry = next((x for x in re.split('\n\s+\},\n',
                             text) if re.search(f'\["{ep.code}"\]', x)),
                             '')
