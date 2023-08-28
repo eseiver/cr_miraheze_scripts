@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from dataclasses import dataclass, field
 
@@ -7,6 +8,10 @@ from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound
 from youtube_transcript_api.formatters import JSONFormatter
 
 from .cr import wikify_html_string, ActorData, Ep
+from .ep import DATA_PATH
+
+TRANSCRIPT_PATH = os.path.join(DATA_PATH, 'generated_transcripts')
+JSON_PATH = os.path.join(DATA_PATH, 'transcript_json')
 
 BREAK_PHRASES = [
     'our break', "we'll take a break", 'go to break',
@@ -120,10 +125,10 @@ class YoutubeTranscript:
                  force_redownload=False, **kwargs):
         self.ep = ep
         self.yt = yt
-        self.transcript_folder = 'generated_transcripts'
-        self.json_folder = 'transcript_json'
-        self.text_filename = f"{self.transcript_folder}/{self.ep.code}.txt"
-        self.json_filename = f"{self.json_folder}/{self.ep.code}.json"
+        self.transcript_folder = TRANSCRIPT_PATH
+        self.json_folder = JSON_PATH
+        self.text_filename = os.path.join(self.transcript_folder, f"{self.ep.code}.txt")
+        self.json_filename = os.path.join(self.json_folder, f"{self.ep.code}.json")
         self.write_ts_file = write_ts_file
         self.force_redownload = force_redownload
         self.try_local_file = try_local_file
@@ -151,6 +156,7 @@ class YoutubeTranscript:
         return captions
 
     def save_to_json_file(self, captions=None):
+        os.makedirs(self.json_folder, exist_ok=True)
         if captions is None:
             captions = self._captions
         formatter = JSONFormatter()
@@ -370,6 +376,7 @@ class YoutubeTranscript:
                       '\n[[Category:Transcripts with duplicate lines]]'])
 
         if self.write_ts_file:
+            os.makedirs(self.transcript_folder, exist_ok=True)
             with open(self.text_filename, 'w') as f:
                 f.write(ts)
 
