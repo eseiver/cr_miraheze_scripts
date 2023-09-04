@@ -609,9 +609,12 @@ class YTSwitcherBot(EpisodeBot):
 class EpListBot(EpisodeBot):
     '''For updating a list of episodes with a brand-new entry or new values for the current episode.'''
 
-    def build_episode_entry_dict(self):
+    def build_episode_entry_dict(self, num=None):
         ep = self.opt.ep
         '''Creating values for the fields that would populate an episode entry.'''
+        # default number in table is episode number; can be overwritten
+        if num is None:
+            num = str(ep.number)
         if self.opt.host:
             host = self.opt.host.make_actor_list_string()
         else:
@@ -627,7 +630,7 @@ class EpListBot(EpisodeBot):
         else:
             game_system = ''
         entry_dict = {
-            'no': str(ep.number),
+            'no': num,
             'ep': wiki_code,
             'airdate': self.opt.airdate.date,
             'VOD': ep.wiki_vod,
@@ -639,9 +642,9 @@ class EpListBot(EpisodeBot):
         }
         return entry_dict
 
-    def build_episode_entry(self):
+    def build_episode_entry(self, num=None):
         '''Create the string for a brand new episode entry.'''
-        entry_dict = self.build_episode_entry_dict()
+        entry_dict = self.build_episode_entry_dict(num=num)
 
         ep_entry = "{{Episode table entry\n"
         for k, v in entry_dict.items():
@@ -667,13 +670,24 @@ class EpListBot(EpisodeBot):
         while prev_ep and (prev_ep.code.lower() not in text.lower()):
             prev_ep = prev_ep.get_previous_episode()
 
+        # find previous entry and use to calculate table number two ways
+        # try finding by episode code
+        previous_entry_wiki = next((x for x in wikicode.filter_templates()
+                if x.has_param('ep') and x.name.matches('Episode table entry') and
+                prev_ep and prev_ep.code in x['ep']), '')
+        #if that fails, try finding the last entry
+        if not previous_entry_wiki:
+            for template in reversed(wikicode.filter_templates()):
+                if template.name.matches('Episode table entry'):
+                    previous_entry_wiki = template
+                    break 
+
+        num = int(str(previous_entry_wiki['no'].value)) + 1 if previous_entry_wiki else ep.number
+
         # create new table entry from scratch if it doesn't exist yet, inserting after previous episode
         if not any([ep.code in str(x) for x in wikicode.filter_templates()
                     if x.name.matches('ep')]):
-            ep_entry = self.build_episode_entry()
-            previous_entry_wiki = next((x for x in wikicode.filter_templates()
-                if x.has_param('ep') and x.name.matches('Episode table entry') and
-                prev_ep.code in x['ep']), '')
+            ep_entry = self.build_episode_entry(num=num)
             if previous_entry_wiki:
                 previous_entry = ''.join(['|' + str(x) for x in previous_entry_wiki.params]) + '}}'
                 if previous_entry in text:
@@ -689,12 +703,16 @@ class EpListBot(EpisodeBot):
             else:
                 pywikibot.output("No previous entry or end-of-section marker to append to")
         # if the table entry exists, update any individual params to the new ones in ep_entry_dict
+        # do not overwrite 'no' parameter
         else:
-            ep_entry_dict = self.build_episode_entry_dict()
+            ep_entry_dict = self.build_episode_entry_dict(num=num)
             existing_entry = next(x for x in wikicode.filter_templates()
                 if x.has_param('ep') and x.name.matches('Episode table entry') and ep.code in x['ep'])
             for k, v in ep_entry_dict.items():
-                if v and not (existing_entry.has_param(k) and existing_entry[k].value.strip() == v):
+                if (v and
+                    not (existing_entry.has_param(k) and
+                         existing_entry[k].value.strip() == v) and
+                    k != 'no'):
                     if len(str(v).strip()):
                         existing_entry[k] = v
                     else:
