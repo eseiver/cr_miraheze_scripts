@@ -1207,7 +1207,7 @@ def main(*args: str) -> None:
     required_options = ['ep', 'yt', 'new_ep_name', 'runtime', 'actors']
     for req in required_options:
         if req not in options:
-            if req == 'yt' and any([options.get(x) for x in ['update_page', 'ep_list', 'yt_list', 'transcript', 'upload']]):
+            if req == 'yt' and any([options.get(x) for x in ['update_page', 'yt_list', 'transcript', 'upload']]):
                 value = get_validated_input(arg='yt', regex=YT_ID_REGEX, input_msg="Please enter 11-digit YouTube ID for the video")
                 options[req] = YT(value)
             elif req == 'new_ep_name':
