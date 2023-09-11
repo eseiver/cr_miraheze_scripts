@@ -366,7 +366,7 @@ class EpisodeBot(
             elif image_value and not self.opt.image_name:
                 image_value = image_value.replace('File:', '')
                 self.opt.image_name = image_value
-            if image_value and image_value != self.opt.image_name:
+            if self.opt.upload and image_value and image_value != self.opt.image_name:
                 pywikibot.output(
                     f'Infobox image {image_value} does not match entered {self.opt.image_name}. Please resolve and try again.')
                 sys.exit()
