@@ -94,7 +94,7 @@ You will be prompted to enter a missing value if needed. No quotation marks need
 -game_system:     For one-shots, game system if not Dungeons & Dragons
 
 Other parameters (most of which are automatically calculated values but still can be passed in)
-can be found in `update_options` for EpisodeBot (line 804).
+can be found in `update_options` for EpisodeBot (line 107).
 
 Potential future features:
 1) Make sure that the episode has been removed from upcoming events
@@ -351,7 +351,8 @@ class EpisodeBot(
             self.opt.airtime = ""
 
         # if image field is filled in with existing file, cancel thumbnail procedure
-        # otherwise, use image_name if entered 
+        # otherwise, use image_name if entered
+        file = None
         if does_value_exist(infobox, param_name='Image') and self.opt.upload:
             image_value = (remove_comments(infobox['Image'].value)).strip()
             if image_value and 'file' not in image_value.lower():
@@ -369,13 +370,21 @@ class EpisodeBot(
                 pywikibot.output(
                     f'Infobox image {image_value} does not match entered {self.opt.image_name}. Please resolve and try again.')
                 sys.exit()
-        if self.opt.image_name and not does_value_exist(infobox, param_name='Image'):
+        # don't offer to fill in field if upload not in procedure or file doesn't exist
+        if self.opt.image_name and not file:
+            file = pywikibot.Page(self.site, self.opt.image_name)
+        if not self.opt.upload and (not file or not file.exists()):
+            pass
+        elif (self.opt.image_name and
+            not does_value_exist(infobox, param_name='Image')):
             infobox['Image'] = ' ' + self.opt.image_name.lstrip()
         else:
             infobox['Image'] = ' ' + ep.image_filename
 
-        # only write caption if field not filled in or missing
-        if not infobox.has_param('Caption') or not does_value_exist(infobox, param_name='Caption'):
+        # only write caption if field not filled in or missing AND image field filled in
+        if ((not infobox.has_param('Caption')
+            or not does_value_exist(infobox, param_name='Caption'))
+            and does_value_exist(infobox, param_name='Image')):
             infobox['Caption'] = make_image_caption(actors=self.opt.actors, ep=ep)
 
         if not any([x.name.matches(ep.navbox_name) for x in wikicode.filter_templates()]):
