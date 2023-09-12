@@ -27,6 +27,7 @@ DURING_BREAK_PHRASES = [
 
 actor_data = ActorData()
 
+
 def break_criteria_1(line, break_taken=False, during_break=False):
     '''Matt says they're taking a break'''
     if (not break_taken and not during_break and
@@ -187,18 +188,9 @@ class YoutubeTranscript:
 
         return captions
 
-    def process_captions(self, captions=None):
-        '''Combine raw captions across line breaks to create transcript.'''
-        fixed_lines = ['== Pre-show ==']
-        line_in_progress = ''
-        active_quote = False
-        during_intro = False
-        intro_done = False
-
+    def divide_captions_by_speaker(self, captions=None):
         if captions is None:
             captions = self._captions
-
-        # split captions along linebreaks if a new speaker
         caption_lines = []
         for i, line in enumerate(captions):
             lines = [x.strip() for x in line['text'].split('\n')]
@@ -207,9 +199,10 @@ class YoutubeTranscript:
             for l in lines:
                 line_and_starttime = (l, int(line['start']))
                 caption_lines.append(line_and_starttime)
+        return caption_lines
 
-        # hide duplicate lines with wiki comments
-        preprocessed_lines = []
+    def flag_duplicate_captions(self, caption_lines):
+        preprocessed_captions = []
         for i, (line, starttime) in enumerate(caption_lines):
             dupe = False
             # ignore blank lines
@@ -226,19 +219,29 @@ class YoutubeTranscript:
                 dupe_starttime = caption_lines[i-1][1]
                 line = '<!-- DUPLICATE ' + line + '-->'
                 self.dupe_lines.append((wikify_html_string(line), dupe_starttime))
-            preprocessed_lines.append(line)
+            preprocessed_captions.append(line)
+        return preprocessed_captions
 
-        # combine across all lines into single txt file
-        for i, line in enumerate(preprocessed_lines):
+    def combine_preprocessed_captions(self, preprocessed_captions):
+        during_intro = False
+        intro_done = False
+        active_quote = False
+        fixed_lines = []
+        line_in_progress = ''
+
+        for i, line in enumerate(preprocessed_captions):
+            next_line = preprocessed_captions[i+1] if not intro_done else ''
 
             # ignore the intro song (with predictable beginning and end), add Part I header
             if (not during_intro and
                 not intro_done and
-                (re.search("♪ Critical\s+\(It's Thursday\)", line)) or
-                line.strip() == "ALL: ♪ Critical"):
+                (re.search("♪ It's Thursday night ♪", line)) or
+                line.strip() == "♪ Critical, critical ♪"):
                 during_intro = True
                 continue
-            elif during_intro and any([x in line.lower() for x in ['(flames', 'welcome back']]):
+            elif during_intro and (any([x in next_line.lower() for x in ['(flames', 'welcome back']])
+                                   or
+                                   '♪' not in line):
                 during_intro = False
                 intro_done = True
                 line_in_progress += '\n\n== Part I ==\n'
@@ -268,16 +271,17 @@ class YoutubeTranscript:
 
             # these are non-dialogue descriptions that get their own lines (if not in middle of quote)
             elif re.match('^\(.*?\)$', line.strip()) and not active_quote:
-                if i+1 >= len(preprocessed_lines):
+                if i+1 >= len(preprocessed_captions):
                     fixed_lines.append(line)
                     continue
-                prev_line = preprocessed_lines[i-1] if i != 0 else ''
-                next_line = preprocessed_lines[i+1] if len(preprocessed_lines) > i else ''
+                prev_line = preprocessed_captions[i-1] if i != 0 else ''
+                next_line = preprocessed_captions[i+1] if len(preprocessed_captions) > i else ''
                 if bool(re.search('^[A-Z].*?[A-Z]:', next_line) and not re.search(':$', prev_line)):
                     fixed_lines.append(line_in_progress)
                     line_in_progress = ''
                     fixed_lines.append(line)
                 else:
+
                     line_in_progress = ' '.join([line_in_progress.strip(), line.strip()]).strip()
                     quote_count = re.sub('<\!--.*?-->', '', line_in_progress).count('"')
                     if quote_count % 2 == 0:
@@ -298,13 +302,25 @@ class YoutubeTranscript:
 
         transcript = '\n\n'.join(fixed_lines)
 
-        # replace curly quotes and apostrophes
-        transcript = (transcript
-                .replace('“', '"')
-                .replace('”','"')
-                .replace("‘", "'")
-                .replace("’", "'")
-                )
+        return transcript
+
+    def process_captions(self, captions=None):
+        '''Combine raw captions across line breaks to create transcript.'''
+
+        if captions is None:
+            captions = self._captions
+
+        # split captions along linebreaks if a new speaker
+        caption_lines = self.divide_captions_by_speaker()
+
+        # hide duplicate lines with wiki comments
+        preprocessed_captions = self.flag_duplicate_captions(caption_lines=caption_lines)
+
+        # combine across all lines into single txt file
+        transcript = '\n'.join(
+            ['== Pre-show ==',
+             self.combine_preprocessed_captions(preprocessed_captions=preprocessed_captions)]
+            )
 
         return transcript
 
@@ -349,25 +365,34 @@ class YoutubeTranscript:
         return ts
 
     def process_transcript(self, captions):
-        # Step 1: Combine lines, flag duplicates, remove extraneous quotation marks
+
+        # Step 1: combine lines and flag duplicates
         ts = self.process_captions(captions)
 
-        # Step 2: remove and replace html markup
+        # Step 2: replace curly quotes and apostrophes
+        ts = (ts
+                .replace('“', '"')
+                .replace('”','"')
+                .replace("‘", "'")
+                .replace("’", "'")
+                )
+
+        # Step 3: remove and replace html markup
         ts = wikify_html_string(ts)
 
-        # Step 3: Comment out the break
+        # Step 4: Comment out the break
         if not self.ignore_break:
             ts = Breakfinder(transcript=ts, ep=self.ep).revised_transcript
 
-        # Step 4: Add cleanup tag if no speaker tags found
+        # Step 5: Add cleanup tag if no speaker tags found
         if not any(tag in ts for tag in self.actor_data.speaker_tags):
             ts = f'{{{{cleanup|speaker tags not found}}}}\n\n{ts}'
             pywikibot.output("No speaker tags found in transcript; tagged for cleanup.")
 
-        # Step 5: add commented_out error messages to top of transcript
+        # Step 6: add commented_out error messages to top of transcript
         ts = self.process_errors(ts)
 
-        # Step 6: add navigation and category
+        # Step 7: add navigation and category
         t_cat = f"Category:{self.ep.transcript_category}"
         ts = ''.join(['{{Transcript-Nav}}\n__FORCETOC__\n\n', 
                       ts,
