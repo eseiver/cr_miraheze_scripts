@@ -162,11 +162,11 @@ def make_image_caption(ep: Ep, actors: Actors) -> str:
     '''For the caption field in the episode article.'''
     # 4-Sided Dive has separate caption conventions from other episode types.
     if ep.prefix == '4SD':
-        caption = f' {{{{art official caption|nointro=true|subject=Thumbnail|screenshot=1|source={ep.wiki_code}}}}}'
+        caption = f' {{{{art official caption|nointro=true|subject=Thumbnail|screenshot=1|source={ep.wiki_nolink}}}}}'
     elif actors and len(actors.name_list):
-        caption = f' {ep.wiki_code} thumbnail featuring {actors.name_string}.'
+        caption = f' {ep.wiki_nolink} thumbnail featuring {actors.name_string}.'
     else:
-        caption = f' {ep.wiki_code} thumbnail.'
+        caption = f' {ep.wiki_nolink} thumbnail.'
     return caption
 
 

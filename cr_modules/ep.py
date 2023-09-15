@@ -223,8 +223,18 @@ class Ep:
         return wiki
 
     @property
+    def wiki_nolink(self):
+        wiki = f'{{{{ep|{self.code}|nolink=true}}}}'
+        return wiki
+
+    @property
     def wiki_noshow(self):
         wiki = f'{{{{ep|{self.code}|noshow=true}}}}'
+        return wiki
+
+    @property
+    def wiki_noshow_nolink(self):
+        wiki = f'{{{{ep|{self.code}|noshow=true|nolink=true}}}}'
         return wiki
 
     @property
