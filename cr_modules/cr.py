@@ -118,10 +118,7 @@ class Actors:
             if len(candidates) == 1:
                 match = candidates[0]
             elif len(candidates) > 1:
-                if candidates:
-                    pywikibot.output(f"Please clarify '{actor}': {candidates}")
-                else:
-                    pywikibot.output(f"ERROR: no match for '{actor}'")
+                pywikibot.output(f"Please clarify '{actor}': {candidates}")
                 continue
             elif self.matched_only:
                 pywikibot.output(f"'{actor}' did not match an actor. Check spelling and use actor's full name")
