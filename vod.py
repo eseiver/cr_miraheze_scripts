@@ -225,6 +225,7 @@ class EpisodeBot(
         move_it = pywikibot.input_yn(f"Move [[{self.current_page.title()}]] to [[{self.opt.new_page_name}]]?")
         if move_it:
             pywikibot.output(f"Moving page from [[{self.current_page.title()}]] to [[{self.opt.new_page_name}]]")
+            old_title = str(self.current_page.title())
             self.current_page.move(self.opt.new_page_name,
                                    reason=move_summary,
                                    )
@@ -824,7 +825,7 @@ class RedirectFixerBot(EpisodeBot):
         all_codes = ep.generate_equivalent_codes() + ep.ce_codes
         for code in all_codes:
             self.current_page = pywikibot.Page(self.site, code)
-            text = f"#REDIRECT [[{self.opt.new_page_name}]]"
+            text = f"#REDIRECT [[{self.opt.new_page_name}]]\n[[Category:Episode code redirects]]"
             self.put_current(text, summary="Updating/creating episode redirects (via pywikibot)")
 
 
