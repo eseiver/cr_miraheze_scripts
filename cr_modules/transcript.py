@@ -230,7 +230,9 @@ class YoutubeTranscript:
         line_in_progress = ''
 
         for i, line in enumerate(preprocessed_captions):
-            next_line = preprocessed_captions[i+1] if not intro_done else ''
+            next_line = (preprocessed_captions[i+1]
+                         if not intro_done and i < len(preprocessed_captions) - 1
+                         else '')
 
             # ignore the intro song (with predictable beginning and end), add Part I header
             if (not during_intro and
