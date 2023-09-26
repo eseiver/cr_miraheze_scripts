@@ -278,23 +278,17 @@ class YoutubeTranscript:
                 not intro_done and
                 (re.search("♪ It's Thursday night ♪", line)) or
                 "♪ critical, critical ♪" in line.strip().lower()):
-                print("I SAY NAY AND NAY!!!", during_intro, intro_done)
                 if during_intro:
-                    print("BUT HOW COULD THIS BE???", during_intro, intro_done)
                     raise
                 during_intro = True
-                print("IT STARTS!!!", i)
                 continue
             elif during_intro and (welcome_back(line, language=language)
                                    or '♪' not in line):
-                print('setting a back to false')
-                print('it stops', i)
                 during_intro = False
                 intro_done = True
                 line_in_progress += '\n\n== Part I ==\n'
                 continue
             elif during_intro:
-                print('keeps going')
                 continue
 
             # if ongoing quote, the first '"' can be ignored
