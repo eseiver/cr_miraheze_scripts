@@ -32,7 +32,9 @@ A number of maintenance activities can be performed together (-all) or independe
 
 -airdate_order    Add the episode id & airdate to Module:AirdateOrder/Array
 
--transcript       Create transcript page (auto-skips TRANSCRIPT_EXCLUSIONS)
+-transcript       Create transcript pages for English and other translations (auto-skips TRANSCRIPT_EXCLUSIONS)
+
+-no_translations  Only create the transcript page for English (auto-skips TRANSCRIPT_EXCLUSIONS)
 
 -transcript_list  Add transcript page to list of transcripts (auto-skips TRANSCRIPT_EXCLUSIONS)
 
@@ -123,7 +125,7 @@ from pywikibot.specialbots import UploadRobot
 import requests
 from cr_modules.cr import *
 from cr_modules.ep import *
-from cr_modules.transcript import YoutubeTranscript
+from cr_modules.transcript import YoutubeTranscript, DEFAULT_LANGUAGE
 from dupes import DupeDetectionBot
 
 
@@ -171,7 +173,8 @@ class EpisodeBot(
         'airdate_order': None,  # add to/update the airdate order
         'yt_switcher': None,  # add to/update the yt url switcher
         'ep_array': None,  # add to/update the ep array
-        'transcript': None,  # create episode transcript page (auto-skips TRANSCRIPT_EXCLUSIONS)
+        'transcript': None,  # create episode transcript pages (auto-skips TRANSCRIPT_EXCLUSIONS)
+        'no_translations': None,  # only create English transcript (auto-skips TRANSCRIPT_EXCLUSIONS)
         'transcript_list': None,  # add transcript page to list of transcripts (auto-skips TRANSCRIPT_EXCLUSIONS)
         'TRANSCRIPT_EXCLUSIONS': None, # calculated from Decoder. CxNN prefixes with no transcripts
         'ts': None, # YoutubeTranscript object
@@ -757,22 +760,52 @@ class EpListBot(EpisodeBot):
 
 
 class TranscriptBot(EpisodeBot):
-    '''For creating the transcript page by downloading and processing youtube captions.'''
+    '''For creating transcript pages by downloading and processing youtube captions.
+    Works for both English and all manually translated captions.'''
 
-    def build_transcript(self):
+    def build_transcripts(self, no_translations=None):
+        if no_translations is None:
+            no_translations = self.opt.no_translations
+        assert no_translations is not None
         ts = YoutubeTranscript(ep=self.opt.ep, yt=self.opt.yt, actor_data=ACTOR_DATA)
-        ts.download_and_build_transcript()
+        if no_translations:
+            ts.download_and_build_transcript()
+        else:
+            ts.download_all_language_transcripts()
         return ts
 
-    def treat_page(self):
+    def make_single_transcript(self, language=DEFAULT_LANGUAGE):
         url = 'Transcript:' + self.opt.new_page_name
         self.current_page = pywikibot.Page(self.site, url)
-        ts = self.build_transcript()
+        ts = self.build_transcripts(no_translations=True)
         self.opt.ts = ts
         if self.current_page.exists() and self.current_page.text:
-            pywikibot.output(f'Transcript page already exists for {self.opt.new_page_name}; transcript creation skipped')
+            pywikibot.output(f'Transcript page already exists for {self.opt.new_page_name}; creation skipped')
         else:
-            self.put_current(ts.transcript, summary=f"Creating {self.opt.ep.code} transcript (via pywikibot)")
+            self.put_current(ts.transcript_dict.get(language),
+                             summary=f"Creating {self.opt.ep.code} transcript (via pywikibot)")
+
+    def make_all_transcripts(self):
+        ts = self.build_transcripts(no_translations=False)
+        for language, transcript in ts.transcript_dict.items():
+            if language == DEFAULT_LANGUAGE:
+                url = 'Transcript:' + self.opt.new_page_name
+            else:
+                url = f'Transcript:{self.opt.new_page_name}/{language}'
+
+            self.current_page = pywikibot.Page(self.site, url)
+            if self.current_page.exists() and self.current_page.text:
+                pywikibot.output(f'{language} transcript page already exists for {self.opt.new_page_name}; creation skipped')
+            else:
+                self.put_current(transcript,
+                                 summary=f"Creating {self.opt.ep.code} {language} transcript (via pywikibot)")
+
+
+    def treat_page(self):
+        if self.opt.no_translations:
+            self.make_single_transcript()
+        else:
+            self.make_all_transcripts()
 
 
 class TranscriptListBot(EpisodeBot):
@@ -1225,6 +1258,10 @@ def main(*args: str) -> None:
             options[task] = True
         elif not options.get(task):
             options[task] = False
+
+    # handle optional no_translations flag
+    if not options.get('no_translations'):
+        options['no_translations'] = False
 
     # get user input for required values that were not passed in.
     # only required if certain tasks will be conducted
