@@ -407,7 +407,10 @@ class EpisodeBot(
         link_template = next((x for x in wikicode.filter_templates() if x.name.matches('TranscriptLink')), None)
         url = 'Transcript:' + self.opt.new_page_name
         transcript_page = pywikibot.Page(self.site, url)
-        if not link_template and (self.opt.transcript or transcript_page.exists()):
+        if (not link_template
+            and (self.opt.transcript or transcript_page.exists())
+            and self.opt['ep'].prefix not in TRANSCRIPT_EXCLUSIONS
+            ):
             synopsis_heading = next(x for x in wikicode.filter_headings() if x.title.matches('Synopsis'))
             text = text.replace(str(synopsis_heading), str(synopsis_heading) + '\n{{TranscriptLink}}\n')
             assert 'TranscriptLink' in text
