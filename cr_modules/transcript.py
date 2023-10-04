@@ -152,7 +152,7 @@ class YoutubeTranscript:
         self.ignore_duplicates = ignore_duplicates
         self.preserve_formatting = preserve_formatting
         self.actor_data = actor_data
-        self.dupe_lines = []
+        self.dupe_lines = {}
 
     def create_from_json_file(self, language=DEFAULT_LANGUAGE):
         if language == DEFAULT_LANGUAGE:
@@ -230,8 +230,10 @@ class YoutubeTranscript:
                 caption_lines.append(line_and_starttime)
         return caption_lines
 
-    def flag_duplicate_captions(self, caption_lines):
+    def flag_duplicate_captions(self, caption_lines, language=DEFAULT_LANGUAGE):
         preprocessed_captions = []
+        if not self.dupe_lines.get(language):
+            self.dupe_lines[language] = []
         for i, (line, starttime) in enumerate(caption_lines):
             dupe = False
             # ignore blank lines and music
@@ -249,7 +251,7 @@ class YoutubeTranscript:
             if dupe:
                 dupe_starttime = caption_lines[i-1][1]
                 line = '<!-- DUPLICATE ' + line + '-->'
-                self.dupe_lines.append((wikify_html_string(line), dupe_starttime))
+                self.dupe_lines[language].append((wikify_html_string(line), dupe_starttime))
             preprocessed_captions.append(line)
         return preprocessed_captions
 
@@ -356,7 +358,8 @@ class YoutubeTranscript:
         caption_lines = self.divide_captions_by_speaker(language=language)
 
         # hide duplicate lines with wiki comments
-        preprocessed_captions = self.flag_duplicate_captions(caption_lines=caption_lines)
+        preprocessed_captions = self.flag_duplicate_captions(caption_lines=caption_lines,
+                                                             language=language)
 
         # combine across all lines into single txt file
         transcript = self.combine_preprocessed_captions(preprocessed_captions=preprocessed_captions,

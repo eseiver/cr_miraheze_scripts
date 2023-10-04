@@ -778,12 +778,15 @@ class TranscriptBot(EpisodeBot):
         url = 'Transcript:' + self.opt.new_page_name
         self.current_page = pywikibot.Page(self.site, url)
         ts = self.build_transcripts(no_translations=True)
-        self.opt.ts = ts
         if self.current_page.exists() and self.current_page.text:
+            # if existing transcript page, replace transcript in transcript_dict
+            # all duplicate line detection and .json should still be the same
             pywikibot.output(f'Transcript page already exists for {self.opt.new_page_name}; creation skipped')
+            ts.transcript_dict[language] = self.current_page.text
         else:
             self.put_current(ts.transcript_dict.get(language),
                              summary=f"Creating {self.opt.ep.code} transcript (via pywikibot)")
+        self.opt.ts = ts
 
     def make_all_transcripts(self):
         ts = self.build_transcripts(no_translations=False)
@@ -795,10 +798,13 @@ class TranscriptBot(EpisodeBot):
 
             self.current_page = pywikibot.Page(self.site, url)
             if self.current_page.exists() and self.current_page.text:
+                # if existing transcript page, replace in dict
                 pywikibot.output(f'{language} transcript page already exists for {self.opt.new_page_name}; creation skipped')
+                ts.transcript_dict[language] = self.current_page.text
             else:
                 self.put_current(transcript,
                                  summary=f"Creating {self.opt.ep.code} {language} transcript (via pywikibot)")
+        self.opt.ts = ts
 
 
     def treat_page(self):
@@ -1427,17 +1433,19 @@ def main(*args: str) -> None:
                 bot9.treat_page()
 
         if options.get('ts'):
-            dupe_count = len(options['ts'].dupe_lines)
-            if dupe_count:
+            dupe_count = len(options['ts'].dupe_lines[DEFAULT_LANGUAGE])
+            if dupe_count and '<!-- DUPLICATE' in options['ts'].transcript_dict[DEFAULT_LANGUAGE]:
                 dupes = pywikibot.input_yn(f'Process {dupe_count} duplicate captions in transcript now?')
+                has_dupes = True
             else:
                 dupes = False
+                has_dupes = False
                 pywikibot.output('No duplicates found in transcript to process.')
             if dupes:
                 bot10 = DupeDetectionBot(generator=gen, **options)
                 bot10.current_page = pywikibot.Page(bot10.site, f"Transcript:{options['new_ep_name']}")
                 bot10.treat_page()
-            else:
+            elif has_dupes:
                 command = f"\n<<yellow>>python pwb.py dupes -ep:{options['ep'].code} -yt:{options['yt'].yt_id}<<default>>"
                 pywikibot.output(f'Skipping ts duplicate processing. You can run this later:{command}')
 
