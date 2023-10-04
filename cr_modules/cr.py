@@ -114,15 +114,22 @@ class Actors:
             #skip joining words
             if actor.lower() in ['and', 'also']:
                 continue
-            candidates = [x for x in self.actor_data.actor_names if actor.lower() in x.lower()]
+            candidates = [x for x in self.actor_data.actor_names if x and actor.lower() in x.lower()]
             if len(candidates) == 1:
                 match = candidates[0]
             elif len(candidates) > 1:
-                pywikibot.output(f"Please clarify '{actor}': {candidates}")
-                continue
+                choices = [(str(i+1), x) for i, x in enumerate(candidates)]
+                choice = pywikibot.input_choice(f"Please clarify '{actor}'",
+                                                choices)
+                match = next(x for x in candidates if x.lower() == choice.lower())
             elif self.matched_only:
-                pywikibot.output(f"'{actor}' did not match an actor. Check spelling and use actor's full name")
-                continue
+                choice = pywikibot.input_yn(f"No match for '{actor}'. Check spelling or re-run using <<yellow>>-download_data<<default>> flag."
+                                   " Enter name manually?")
+                if choice:
+                    match = pywikibot.input("Full name")
+                    pywikibot.output(f"Done. Please add {match} to <<yellow>>Module:ActorData<<default>>.")
+                else:
+                    continue
             else:
                 match = actor
             matched_list.append(match)
