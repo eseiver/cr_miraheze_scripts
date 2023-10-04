@@ -380,9 +380,9 @@ class YoutubeTranscript:
 
         # the only lowercase word before the colon should be 'and'
         try:
-            assert set(re.findall('[a-z]+', transcript_names)) == {'and'}
+            assert set(re.findall('[A-Z]?[a-z]+', transcript_names)) == {'and'}
         except AssertionError:
-            errors = [x for x in set(re.findall('[a-z]+', transcript_names)) if x != 'and']
+            errors = [x for x in set(re.findall('[A-Z]?[a-z]+', transcript_names)) if x != 'and']
             error_warning += f"Words besides 'and' in lower case for speaker names: {errors}" + '\n'
 
         # all uppercase words should be names in CR_UPPER
@@ -443,9 +443,9 @@ class YoutubeTranscript:
         t_cat = f"Category:{self.ep.transcript_category}"
         if language != DEFAULT_LANGUAGE:
             t_cat += f"/{language}"
-        ts = ''.join(['{{Transcript-Nav/sandbox}}\n__FORCETOC__\n\n', 
+        ts = ''.join(['{{Transcript-Nav}}\n__FORCETOC__\n\n', 
                       ts,
-                      '\n{{Transcript-Nav/sandbox}}\n', 
+                      '\n{{Transcript-Nav}}\n', 
                       f'[[{t_cat}]]',
                       '\n[[Category:Transcripts with duplicate lines]]'])
 
