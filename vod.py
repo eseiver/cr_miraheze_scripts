@@ -173,6 +173,7 @@ class EpisodeBot(
         'ep_array': None,  # add to/update the ep array
         'transcript': None,  # create episode transcript page (auto-skips TRANSCRIPT_EXCLUSIONS)
         'transcript_list': None,  # add transcript page to list of transcripts (auto-skips TRANSCRIPT_EXCLUSIONS)
+        'TRANSCRIPT_EXCLUSIONS': None, # calculated from Decoder. CxNN prefixes with no transcripts
         'ts': None, # YoutubeTranscript object
         'redirects': None,  # add/update redirects from ep_id to new_page_name
         'navbox': None,  # add ep_id to the appropriate navbox template
@@ -409,7 +410,7 @@ class EpisodeBot(
         transcript_page = pywikibot.Page(self.site, url)
         if (not link_template
             and (self.opt.transcript or transcript_page.exists())
-            and self.opt['ep'].prefix not in TRANSCRIPT_EXCLUSIONS
+            and self.opt['ep'].prefix not in self.opt.TRANSCRIPT_EXCLUSIONS
             ):
             synopsis_heading = next(x for x in wikicode.filter_headings() if x.title.matches('Synopsis'))
             text = text.replace(str(synopsis_heading), str(synopsis_heading) + '\n{{TranscriptLink}}\n')
@@ -1172,6 +1173,7 @@ def main(*args: str) -> None:
     EP_REGEX = Ep('1x01', episode_decoder=EPISODE_DECODER).ep_regex
     TRANSCRIPT_EXCLUSIONS = [k for k, v in decoder._json.items()
                              if v.get('noTranscript') is True]
+    options['TRANSCRIPT_EXCLUSIONS'] = TRANSCRIPT_EXCLUSIONS
 
     if not 'ACTOR_DATA' in locals():
         ACTOR_DATA = ActorData()
