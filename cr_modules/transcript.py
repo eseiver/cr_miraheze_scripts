@@ -463,13 +463,14 @@ class YoutubeTranscript:
 
     def download_and_build_transcript(self, language=DEFAULT_LANGUAGE):
         # check for local file first
+        if not hasattr(self, 'captions_dict'):
+            self.captions_dict = {}
         if self.try_local_file:
             try:
                 captions = self.create_from_json_file(language=language)
+                self.captions_dict[language] = captions
             except FileNotFoundError:
                 pass
-        if not hasattr(self, 'captions_dict'):
-            self.captions_dict = {}
         if not self.captions_dict.get(language) or self.force_redownload is True:
             captions = self.captions_download(language=language)
         else:
