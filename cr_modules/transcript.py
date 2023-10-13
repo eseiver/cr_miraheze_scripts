@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import sys
 from dataclasses import dataclass, field
 
 import pywikibot
@@ -29,6 +30,16 @@ DEFAULT_LANGUAGE = 'en'
 
 actor_data = ActorData()
 
+SPEAKER_TAGS_RU = [
+    'МЭТТ',
+    'ТРЭВИС',
+    'ЛОРА',
+    'МАРИША',
+    'СЭМ',
+    'ЛИАМ',
+    'ТАЛЕСИН',
+    'ЭШЛИ',
+]
 
 def break_criteria_1(line, break_taken=False, during_break=False):
     '''Matt says they're taking a break'''
@@ -268,6 +279,16 @@ class YoutubeTranscript:
         if language != DEFAULT_LANGUAGE:
             intro_done = True
 
+        if language == 'ru':
+            speaker_tags = SPEAKER_TAGS_RU
+            all_uppers = '[{}]'.format("".join(
+                [chr(i) for i in range(sys.maxunicode) if chr(i).isupper()]
+                ))
+            speaker_regex = f'^{all_uppers}.*?{all_uppers}\s*:'
+        else:
+            speaker_tags = self.actor_data.speaker_tags
+            speaker_regex = '^[A-Z].*?[A-Z]\s*:'
+
         for i, line in enumerate(preprocessed_captions):
             next_line = (preprocessed_captions[i+1]
                          if not intro_done and i < len(preprocessed_captions) - 1
@@ -303,15 +324,15 @@ class YoutubeTranscript:
                 active_quote = True
 
             # flag potential missing colon
-            if any([x in line for x in self.actor_data.speaker_tags]) and ':' not in line:
+            if any([x in line for x in speaker_tags]) and ':' not in line:
                 line = '<!-- potential missing speaker tag -->' + line
 
             # this indicates a person is speaking (and thus a new line begins)
-            if re.search('^[A-Z].*?[A-Z]\s*:', line):
+            if re.search(speaker_regex, line):
                 if line_in_progress:
                     fixed_lines.append(line_in_progress)
                 line_in_progress = line
-                current_speaker = re.search('^[A-Z].*?[A-Z]\s*:', line)
+                current_speaker = re.search(speaker_regex, line)
 
             # these are non-dialogue descriptions that get their own lines (if not in middle of quote)
             elif re.match('^\(.*?\)$', line.strip()) and not active_quote:
@@ -320,7 +341,7 @@ class YoutubeTranscript:
                     continue
                 prev_line = preprocessed_captions[i-1] if i != 0 else ''
                 next_line = preprocessed_captions[i+1] if len(preprocessed_captions) > i else ''
-                if bool(re.search('^[A-Z].*?[A-Z]\s*:', next_line) and not re.search(':$', prev_line)):
+                if bool(re.search(speaker_regex, next_line) and not re.search(':$', prev_line)):
                     fixed_lines.append(line_in_progress)
                     line_in_progress = ''
                     fixed_lines.append(line)
@@ -369,13 +390,18 @@ class YoutubeTranscript:
 
         return transcript
 
-    def check_ts_names(self, transcript):
+    def check_ts_names(self, transcript, language=DEFAULT_LANGUAGE):
         '''For making sure that there are no typos in speakers' names. Returns error message if not.'''
         error_warning = ''
         transcript_names = ' '.join([x.split(':')[0] for x in transcript.splitlines() if ':' in x])
 
+        if language == 'ru':
+            speaker_tags = SPEAKER_TAGS_RU
+        else:
+            speaker_tags = self.actor_data.speaker_tags
+
         # don't check names if there are no standard ones to begin with
-        if not any(tag in transcript for tag in self.actor_data.speaker_tags):
+        if not any(tag in transcript for tag in speaker_tags):
             return ''
 
         # the only lowercase word before the colon should be 'and'
@@ -387,20 +413,20 @@ class YoutubeTranscript:
 
         # all uppercase words should be names in CR_UPPER
         try:
-            assert set(re.findall('[A-Z]+', transcript_names)).issubset(self.actor_data.speaker_tags)
+            assert set(re.findall('[A-Z]+', transcript_names)).issubset(speaker_tags)
         except AssertionError:
             names = [x for x in set(re.findall('[A-Z]+', transcript_names))
-                     if x not in self.actor_data.speaker_tags]
+                     if x not in speaker_tags]
             error_warning += f"Some speaker names potentially misspelled: {names}" + '\n'
 
         return error_warning
 
-    def process_errors(self, ts):
+    def process_errors(self, ts, language=DEFAULT_LANGUAGE):
         '''Can add more processes later if needed.'''
         errors_comments = ''
 
         # verify that actor names are correct
-        errors_comments += self.check_ts_names(ts)
+        errors_comments += self.check_ts_names(ts, language=language)
 
         # add commented_out error messages to top of transcript
         if errors_comments:
@@ -432,12 +458,16 @@ class YoutubeTranscript:
             ts = Breakfinder(transcript=ts, ep=self.ep).revised_transcript
 
         # Step 5: Add cleanup tag if no speaker tags found
-        if not any(tag in ts for tag in self.actor_data.speaker_tags):
+        if language == 'ru':
+            speaker_tags = SPEAKER_TAGS_RU
+        else:
+            speaker_tags = self.actor_data.speaker_tags
+        if not any(tag in ts for tag in speaker_tags):
             ts = f'{{{{cleanup|speaker tags not found}}}}\n\n{ts}'
             pywikibot.output("No speaker tags found in transcript; tagged for cleanup.")
 
         # Step 6: add commented_out error messages to top of transcript
-        ts = self.process_errors(ts)
+        ts = self.process_errors(ts, language=language)
 
         # Step 7: add navigation and category
         t_cat = f"Category:{self.ep.transcript_category}"
