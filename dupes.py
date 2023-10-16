@@ -117,12 +117,15 @@ class DupeDetectionBot(SingleSiteBot, ExistingPageBot):
             if language != DEFAULT_LANGUAGE:
                 title = f"{self.current_page.title()}/{language}"
                 self.current_page = pywikibot.Page(self.site, title)
+        if not self.opt.ignore_existing and self.opt.ts:
+            self.opt.ts.transcript_dict[language] = self.current_page.text
 
     def get_transcript(self, language=DEFAULT_LANGUAGE):
         if not self.opt.ts:
             self.get_wiki_transcript()
             self.opt.ts = YoutubeTranscript().download_and_build_transcript(language=language)
-            self.opt.ts.transcript_dict[language] = self.current_page.text
+            if not self.opt.ignore_existing:
+                self.opt.ts.transcript_dict[language] = self.current_page.text
         return self.opt.ts
 
     def process_duplicates(self, language=DEFAULT_LANGUAGE):
