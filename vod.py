@@ -1429,8 +1429,8 @@ def main(*args: str) -> None:
                 bot9.treat_page()
                 if bot9.opt.ts:
                     options['ts'] = bot9.opt.ts
-                bot9 = TranscriptRedirectBot(generator=gen, **options)
-                bot9.treat_page()
+                bot10 = TranscriptRedirectBot(generator=gen, **options)
+                bot10.treat_page()
 
         if options.get('ts'):
             dupe_count = len(options['ts'].dupe_lines[DEFAULT_LANGUAGE])
@@ -1442,9 +1442,9 @@ def main(*args: str) -> None:
                 has_dupes = False
                 pywikibot.output('No duplicates found in transcript to process.')
             if dupes:
-                bot10 = DupeDetectionBot(generator=gen, **options)
-                bot10.current_page = pywikibot.Page(bot10.site, f"Transcript:{options['new_ep_name']}")
-                bot10.treat_page()
+                bot11 = DupeDetectionBot(generator=gen, **options)
+                bot11.current_page = pywikibot.Page(bot11.site, f"Transcript:{options['new_ep_name']}")
+                bot11.treat_page()
             elif has_dupes:
                 command = f"\n<<yellow>>python pwb.py dupes -ep:{options['ep'].code} -yt:{options['yt'].yt_id}<<default>>"
                 pywikibot.output(f'Skipping ts duplicate processing. You can run this later:{command}')
@@ -1453,15 +1453,15 @@ def main(*args: str) -> None:
             if options['ep'].prefix in TRANSCRIPT_EXCLUSIONS:
                 pywikibot.output(f'\nSkipping transcript list update for {options["ep"].show} episode')
             else:
-                bot11 = TranscriptListBot(generator=gen, **options)
-                bot11.treat_page()
+                bot12 = TranscriptListBot(generator=gen, **options)
+                bot12.treat_page()
 
         if options.get('long_short'):
             if options['ep'].prefix == '4SD':
                 pywikibot.output(f'\nSkipping longest/shortest for {options["ep"].show} episode')
             else:
-                bot12 = LongShortBot(generator=gen, **options)
-                bot12.treat_page()
+                bot13 = LongShortBot(generator=gen, **options)
+                bot13.treat_page()
 
 
 if __name__ == '__main__':
