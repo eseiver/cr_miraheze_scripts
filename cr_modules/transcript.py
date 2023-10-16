@@ -300,16 +300,23 @@ class YoutubeTranscript:
             if (not during_intro and
                 not intro_done and
                 (re.search("♪ It's Thursday night ♪", line)) or
-                "♪ critical, critical ♪" in line.strip().lower()):
+                "♪ critical" in line.strip().lower()):
                 if during_intro:
-                    raise
+                    print(f'error finding intro for {self.ep}')
                 during_intro = True
                 continue
-            elif during_intro and (welcome_back(line, language=language)
-                                   or '♪' not in line):
+            elif during_intro and (welcome_back(line, language=language) or
+                                   any(x in line.lower() for x in [
+                                       'flames',
+                                       'fire',
+                                       'wind'
+                                   ])):
                 during_intro = False
                 intro_done = True
-                line_in_progress += '\n\n== Part I ==\n'
+                if welcome_back(line, language=language):
+                    line_in_progress += ('\n\n== Part I ==\n\n' + line)
+                else:
+                    line_in_progress += '\n\n== Part I =='
                 continue
             elif during_intro:
                 continue
