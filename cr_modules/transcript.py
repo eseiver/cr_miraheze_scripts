@@ -401,6 +401,10 @@ class YoutubeTranscript:
         '''For making sure that there are no typos in speakers' names. Returns error message if not.'''
         error_warning = ''
         transcript_names = ' '.join([x.split(':')[0] for x in transcript.splitlines() if ':' in x])
+        capital_names = set(re.search(r'[A-Z]+', x).group() for x in transcript_names.split() if re.search(r'\b[A-Z]+\b', x))
+        other_names = set(x for x in transcript_names.split()
+                          if not re.search(r'[A-Z]+', x) or
+                          re.search(r'[A-Z]+', x).group() not in capital_names)
 
         if language == 'ru':
             speaker_tags = SPEAKER_TAGS_RU
@@ -413,16 +417,16 @@ class YoutubeTranscript:
 
         # the only lowercase word before the colon should be 'and'
         try:
-            assert set(re.findall('[A-Z]?[a-z]+', transcript_names)) == {'and'}
+            assert other_names == {'and'}
         except AssertionError:
-            errors = [x for x in set(re.findall('[A-Z]?[a-z]+', transcript_names)) if x != 'and']
+            errors = [x for x in other_names if x != 'and']
             error_warning += f"Words besides 'and' in lower case for speaker names: {errors}" + '\n'
 
         # all uppercase words should be names in CR_UPPER
         try:
-            assert set(re.findall('[A-Z]+', transcript_names)).issubset(speaker_tags)
+            assert capital_names.issubset(speaker_tags)
         except AssertionError:
-            names = [x for x in set(re.findall('[A-Z]+', transcript_names))
+            names = [x for x in capital_names
                      if x not in speaker_tags]
             error_warning += f"Some speaker names potentially misspelled: {names}" + '\n'
 
