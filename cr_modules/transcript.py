@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import sys
 from dataclasses import dataclass, field
 
 import pywikibot
@@ -25,8 +26,20 @@ DURING_BREAK_PHRASES = [
     "chop it off. let's do it.", '(gale laughing) later, chudruckers!'
 ]
 
+DEFAULT_LANGUAGE = 'en'
+
 actor_data = ActorData()
 
+SPEAKER_TAGS_RU = [
+    'МЭТТ',
+    'ТРЭВИС',
+    'ЛОРА',
+    'МАРИША',
+    'СЭМ',
+    'ЛИАМ',
+    'ТАЛЕСИН',
+    'ЭШЛИ',
+]
 
 def break_criteria_1(line, break_taken=False, during_break=False):
     '''Matt says they're taking a break'''
@@ -53,6 +66,19 @@ def break_criteria_3(line, break_taken=False, during_break=False):
     if (not break_taken and not during_break and
         any([x in line.lower() for x in DURING_BREAK_PHRASES
             ])):
+        return True
+    else:
+        return False
+
+def welcome_back(line, language=DEFAULT_LANGUAGE):
+    welcome_backs = {
+        'en': 'welcome back',
+        'fr': 'bienvenue à nouveau',
+        'it': 'bentornato',
+        'pt': 'bem-vindos de volta',
+        'es': 'bienvenido de nuevo',
+        }
+    if welcome_backs[language] in line.lower():
         return True
     else:
         return False
@@ -104,7 +130,7 @@ class Breakfinder:
                 self.break_found = True
                 continue
             elif (during_break and line.startswith('MATT:')
-                  and 'welcome back' in line.lower()):
+                  and welcome_back(line)):
                 during_break = False
                 break_taken = True
                 next_lines = '\n'.join(lines[i+1:i+5])   # avoids adding this twice
@@ -137,60 +163,74 @@ class YoutubeTranscript:
         self.ignore_duplicates = ignore_duplicates
         self.preserve_formatting = preserve_formatting
         self.actor_data = actor_data
-        self.dupe_lines = []
+        self.dupe_lines = {}
 
-    def download_and_build_transcript(self):
-        # check for local file first
-        if self.try_local_file:
-            try:
-                self._captions = self.create_from_json_file()
-            except FileNotFoundError:
-                pass
-
-        if not hasattr(self, '_captions') or self.force_redownload is True:
-            self._captions = self.captions_download()
-        self.transcript = self.process_transcript(captions=self._captions)
-
-    def create_from_json_file(self):
-        with open(self.json_filename) as f:
+    def create_from_json_file(self, language=DEFAULT_LANGUAGE):
+        if language == DEFAULT_LANGUAGE:
+            filename = self.json_filename
+        else:
+            filename = os.path.join(self.json_folder, f"{self.ep.code}_{language}.json")
+        with open(filename) as f:
             captions = json.load(f)
         return captions
 
-    def save_to_json_file(self, captions=None):
+    def save_to_json_file(self, captions=None, language=DEFAULT_LANGUAGE):
         os.makedirs(self.json_folder, exist_ok=True)
         if captions is None:
-            captions = self._captions
+            captions = self.captions_dict.get(language, {})
         formatter = JSONFormatter()
         json_formatted = formatter.format_transcript(captions)
 
         # Now we can write it out to a file.
-        with open(self.json_filename, 'w', encoding='utf-8') as json_file:
+        if language == DEFAULT_LANGUAGE:
+            filename = self.json_filename
+        else:
+            filename = os.path.join(self.json_folder, f"{self.ep.code}_{language}.json")
+        with open(filename, 'w', encoding='utf-8') as json_file:
             json_file.write(json_formatted)
 
-    def captions_download(self):
-        captions = {}
-        transcript_list = YouTubeTranscriptApi.list_transcripts(self.yt.yt_id)
+    @property
+    def transcript_list(self):
+        if  not hasattr(self, '_transcript_list') or self._transcript_list is None:
+            self._transcript_list = YouTubeTranscriptApi.list_transcripts(self.yt.yt_id)
+        return self._transcript_list
+
+    @property
+    def languages(self, manual_only=True):
+        if not hasattr(self, '_languages') or self._languages is None:
+            if manual_only:
+                self._languages = [x.language_code for x in self.transcript_list
+                                   if not x.is_generated]
+            else:
+                self._languages = [x.language_code for x in self.transcript_list]
+        return self._languages
+
+    def captions_download(self, language=DEFAULT_LANGUAGE):
+        if not hasattr(self, 'captions_dict'):
+            self.captions_dict = {}
         transcript = None
 
+        language_list = [language]
         try:
-            transcript = transcript_list.find_manually_created_transcript(['en'])
+            transcript = self.transcript_list.find_manually_created_transcript(language_list)
             self.manual = True
         except NoTranscriptFound:
             try:
-                transcript = transcript_list.find_generated_transcript(['en'])
+                transcript = self.transcript_list.find_generated_transcript(language_list)
                 self.manual = False
             except NoTranscriptFound:
-                pywikibot.output(f'Youtube video for {self.ep.code} does not have any English captions')
+                pywikibot.output(f'Youtube video for {self.ep.code} does not have any {language} captions')
         if transcript:
             captions = transcript.fetch(preserve_formatting=True)
+            self.captions_dict[language] = captions
             if self.write_ts_file:
-                self.save_to_json_file(captions=captions)
+                self.save_to_json_file(captions=captions, language=language)
 
         return captions
 
-    def divide_captions_by_speaker(self, captions=None):
-        if captions is None:
-            captions = self._captions
+    def divide_captions_by_speaker(self, captions=None, language=DEFAULT_LANGUAGE):
+        if captions is None and language:
+            captions = self.captions_dict.get(language, {})
         caption_lines = []
         for i, line in enumerate(captions):
             lines = [x.strip() for x in line['text'].split('\n')]
@@ -201,14 +241,18 @@ class YoutubeTranscript:
                 caption_lines.append(line_and_starttime)
         return caption_lines
 
-    def flag_duplicate_captions(self, caption_lines):
+    def flag_duplicate_captions(self, caption_lines, language=DEFAULT_LANGUAGE):
         preprocessed_captions = []
+        if not self.dupe_lines.get(language):
+            self.dupe_lines[language] = []
         for i, (line, starttime) in enumerate(caption_lines):
             dupe = False
-            # ignore blank lines
+            # ignore blank lines and music
             if not line.strip():
                 continue
-            if line == caption_lines[i-1][0] and not re.match('^\(', line):
+            if '♪' in line:
+                pass
+            elif line == caption_lines[i-1][0] and not re.match('^\(', line):
                 dupe = True
             elif not re.match('^\(', line):
                 text1 = [x for x in line if x.isalpha()]
@@ -218,16 +262,32 @@ class YoutubeTranscript:
             if dupe:
                 dupe_starttime = caption_lines[i-1][1]
                 line = '<!-- DUPLICATE ' + line + '-->'
-                self.dupe_lines.append((wikify_html_string(line), dupe_starttime))
+                self.dupe_lines[language].append((wikify_html_string(line), dupe_starttime))
             preprocessed_captions.append(line)
         return preprocessed_captions
 
-    def combine_preprocessed_captions(self, preprocessed_captions):
+    def combine_preprocessed_captions(self, preprocessed_captions, language=DEFAULT_LANGUAGE):
         during_intro = False
         intro_done = False
         active_quote = False
         fixed_lines = []
         line_in_progress = ''
+
+        found_music = False
+
+        # don't worry about deleting the intro song if not English
+        if language != DEFAULT_LANGUAGE:
+            intro_done = True
+
+        if language == 'ru':
+            speaker_tags = SPEAKER_TAGS_RU
+            all_uppers = '[{}]'.format("".join(
+                [chr(i) for i in range(sys.maxunicode) if chr(i).isupper()]
+                ))
+            speaker_regex = f'^{all_uppers}.*?{all_uppers}\s*:'
+        else:
+            speaker_tags = self.actor_data.speaker_tags
+            speaker_regex = '^[A-Z].*?[A-Z]\s*:'
 
         for i, line in enumerate(preprocessed_captions):
             next_line = (preprocessed_captions[i+1]
@@ -235,18 +295,28 @@ class YoutubeTranscript:
                          else '')
 
             # ignore the intro song (with predictable beginning and end), add Part I header
+            # if not during_intro and not intro_done:
+
             if (not during_intro and
                 not intro_done and
                 (re.search("♪ It's Thursday night ♪", line)) or
-                line.strip() == "♪ Critical, critical ♪"):
+                "♪ critical" in line.strip().lower()):
+                if during_intro:
+                    print(f'error finding intro for {self.ep}')
                 during_intro = True
                 continue
-            elif during_intro and (any([x in next_line.lower() for x in ['(flames', 'welcome back']])
-                                   or
-                                   '♪' not in line):
+            elif during_intro and (welcome_back(line, language=language) or
+                                   any(x in line.lower() for x in [
+                                       'flames',
+                                       'fire',
+                                       'wind'
+                                   ])):
                 during_intro = False
                 intro_done = True
-                line_in_progress += '\n\n== Part I ==\n'
+                if welcome_back(line, language=language):
+                    line_in_progress += ('\n\n== Part I ==\n\n' + line)
+                else:
+                    line_in_progress += '\n\n== Part I =='
                 continue
             elif during_intro:
                 continue
@@ -261,15 +331,15 @@ class YoutubeTranscript:
                 active_quote = True
 
             # flag potential missing colon
-            if any([x in line for x in self.actor_data.speaker_tags]) and ':' not in line:
+            if any([x in line for x in speaker_tags]) and ':' not in line:
                 line = '<!-- potential missing speaker tag -->' + line
 
             # this indicates a person is speaking (and thus a new line begins)
-            if re.search('^[A-Z].*?[A-Z]:', line):
+            if re.search(speaker_regex, line):
                 if line_in_progress:
                     fixed_lines.append(line_in_progress)
                 line_in_progress = line
-                current_speaker = re.search('^[A-Z].*?[A-Z]:', line)
+                current_speaker = re.search(speaker_regex, line)
 
             # these are non-dialogue descriptions that get their own lines (if not in middle of quote)
             elif re.match('^\(.*?\)$', line.strip()) and not active_quote:
@@ -278,7 +348,7 @@ class YoutubeTranscript:
                     continue
                 prev_line = preprocessed_captions[i-1] if i != 0 else ''
                 next_line = preprocessed_captions[i+1] if len(preprocessed_captions) > i else ''
-                if bool(re.search('^[A-Z].*?[A-Z]:', next_line) and not re.search(':$', prev_line)):
+                if bool(re.search(speaker_regex, next_line) and not re.search(':$', prev_line)):
                     fixed_lines.append(line_in_progress)
                     line_in_progress = ''
                     fixed_lines.append(line)
@@ -306,58 +376,68 @@ class YoutubeTranscript:
 
         return transcript
 
-    def process_captions(self, captions=None):
+    def process_captions(self, captions=None, language=DEFAULT_LANGUAGE):
         '''Combine raw captions across line breaks to create transcript.'''
 
-        if captions is None:
-            captions = self._captions
+        if captions is None and language:
+            captions = self.captions_dict.get(language, {})
 
         # split captions along linebreaks if a new speaker
-        caption_lines = self.divide_captions_by_speaker()
+        caption_lines = self.divide_captions_by_speaker(language=language)
 
         # hide duplicate lines with wiki comments
-        preprocessed_captions = self.flag_duplicate_captions(caption_lines=caption_lines)
+        preprocessed_captions = self.flag_duplicate_captions(caption_lines=caption_lines,
+                                                             language=language)
 
         # combine across all lines into single txt file
-        transcript = '\n'.join(
-            ['== Pre-show ==',
-             self.combine_preprocessed_captions(preprocessed_captions=preprocessed_captions)]
-            )
+        transcript = self.combine_preprocessed_captions(preprocessed_captions=preprocessed_captions,
+                                                language=language)
+        if language == DEFAULT_LANGUAGE:
+            transcript = '== Pre-show ==\n' + transcript
 
         return transcript
 
-    def check_ts_names(self, transcript):
+    def check_ts_names(self, transcript, language=DEFAULT_LANGUAGE):
         '''For making sure that there are no typos in speakers' names. Returns error message if not.'''
         error_warning = ''
         transcript_names = ' '.join([x.split(':')[0] for x in transcript.splitlines() if ':' in x])
+        capital_names = set(re.search(r'[A-Z]+', x).group() for x in transcript_names.split() if re.search(r'\b[A-Z]+\b', x))
+        other_names = set(x for x in transcript_names.split()
+                          if not re.search(r'[A-Z]+', x) or
+                          re.search(r'[A-Z]+', x).group() not in capital_names)
+
+        if language == 'ru':
+            speaker_tags = SPEAKER_TAGS_RU
+        else:
+            speaker_tags = self.actor_data.speaker_tags
 
         # don't check names if there are no standard ones to begin with
-        if not any(tag in transcript for tag in self.actor_data.speaker_tags):
+        if not any(tag in transcript for tag in speaker_tags):
             return ''
 
         # the only lowercase word before the colon should be 'and'
         try:
-            assert set(re.findall('[a-z]+', transcript_names)) == {'and'}
+            assert other_names == {'and'}
         except AssertionError:
-            errors = [x for x in set(re.findall('[a-z]+', transcript_names)) if x != 'and']
+            errors = [x for x in other_names if x != 'and']
             error_warning += f"Words besides 'and' in lower case for speaker names: {errors}" + '\n'
 
         # all uppercase words should be names in CR_UPPER
         try:
-            assert set(re.findall('[A-Z]+', transcript_names)).issubset(self.actor_data.speaker_tags)
+            assert capital_names.issubset(speaker_tags)
         except AssertionError:
-            names = [x for x in set(re.findall('[A-Z]+', transcript_names))
-                     if x not in self.actor_data.speaker_tags]
+            names = [x for x in capital_names
+                     if x not in speaker_tags]
             error_warning += f"Some speaker names potentially misspelled: {names}" + '\n'
 
         return error_warning
 
-    def process_errors(self, ts):
+    def process_errors(self, ts, language=DEFAULT_LANGUAGE):
         '''Can add more processes later if needed.'''
         errors_comments = ''
 
         # verify that actor names are correct
-        errors_comments += self.check_ts_names(ts)
+        errors_comments += self.check_ts_names(ts, language=language)
 
         # add commented_out error messages to top of transcript
         if errors_comments:
@@ -366,10 +446,12 @@ class YoutubeTranscript:
 
         return ts
 
-    def process_transcript(self, captions):
+    def process_transcript(self, captions=None, language=DEFAULT_LANGUAGE):
+        if language and captions is None:
+            captions = self.captions_dict.get(language)
 
         # Step 1: combine lines and flag duplicates
-        ts = self.process_captions(captions)
+        ts = self.process_captions(captions, language=language)
 
         # Step 2: replace curly quotes and apostrophes
         ts = (ts
@@ -383,29 +465,65 @@ class YoutubeTranscript:
         ts = wikify_html_string(ts)
 
         # Step 4: Comment out the break
-        if not self.ignore_break:
+        if not self.ignore_break and language==DEFAULT_LANGUAGE:
             ts = Breakfinder(transcript=ts, ep=self.ep).revised_transcript
 
         # Step 5: Add cleanup tag if no speaker tags found
-        if not any(tag in ts for tag in self.actor_data.speaker_tags):
+        if language == 'ru':
+            speaker_tags = SPEAKER_TAGS_RU
+        else:
+            speaker_tags = self.actor_data.speaker_tags
+        if not any(tag in ts for tag in speaker_tags):
             ts = f'{{{{cleanup|speaker tags not found}}}}\n\n{ts}'
             pywikibot.output("No speaker tags found in transcript; tagged for cleanup.")
 
         # Step 6: add commented_out error messages to top of transcript
-        ts = self.process_errors(ts)
+        ts = self.process_errors(ts, language=language)
 
         # Step 7: add navigation and category
         t_cat = f"Category:{self.ep.transcript_category}"
+        t_dupe_cat = f"Category:Transcripts with duplicate lines"
+        if language != DEFAULT_LANGUAGE:
+            t_cat += f"/{language}"
+            t_dupe_cat += f"/{language}"
+
         ts = ''.join(['{{Transcript-Nav}}\n__FORCETOC__\n\n', 
                       ts,
                       '\n{{Transcript-Nav}}\n', 
                       f'[[{t_cat}]]',
-                      '\n[[Category:Transcripts with duplicate lines]]'])
+                      f'\n[[{t_dupe_cat}]]'])
 
         if self.write_ts_file:
             os.makedirs(self.transcript_folder, exist_ok=True)
-            with open(self.text_filename, 'w') as f:
+            if language == DEFAULT_LANGUAGE:
+                filename = self.text_filename
+            else:
+                filename = os.path.join(self.transcript_folder, f"{self.ep.code}_{language}.txt")
+            with open(filename, 'w') as f:
                 f.write(ts)
 
         # autogenerated captions require different processing (TBD)
         return ts
+
+    def download_and_build_transcript(self, language=DEFAULT_LANGUAGE):
+        # check for local file first
+        if not hasattr(self, 'captions_dict'):
+            self.captions_dict = {}
+        if self.try_local_file:
+            try:
+                captions = self.create_from_json_file(language=language)
+                self.captions_dict[language] = captions
+            except FileNotFoundError:
+                pass
+        if not self.captions_dict.get(language) or self.force_redownload is True:
+            captions = self.captions_download(language=language)
+        else:
+            pass
+        self.captions_dict[language] = captions
+        if not hasattr(self, 'transcript_dict'):
+            self.transcript_dict = {}
+        self.transcript_dict[language] = self.process_transcript(language=language)
+
+    def download_all_language_transcripts(self):
+        for language in self.languages:
+            self.download_and_build_transcript(language=language)

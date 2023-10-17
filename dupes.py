@@ -26,22 +26,23 @@ from pywikibot.bot import (
 from pywikibot import pagegenerators
 from cr_modules.cr import YT, YT_ID_REGEX, get_validated_input
 from cr_modules.ep import Ep
-from cr_modules.transcript import YoutubeTranscript
+from cr_modules.transcript import YoutubeTranscript, DEFAULT_LANGUAGE
 
 class DuplicateProcessor:
     '''Interactive tool for deleting duplicate phrases from captions.'''
     # def __init__(self, transcript):
     #     self.transcript = transcript
 
-    def process_duplicates(self, t):
+    def process_duplicates(self, t, language=DEFAULT_LANGUAGE):
         # assert isinstance(t, YoutubeTranscript), 'Must be object of type YoutubeTranscript.'
 
         line_pairs = []
+        transcript = t.transcript_dict[language]
         try:
-            for line, starttime in t.dupe_lines:
-                if line not in t.transcript:
+            for line, starttime in t.dupe_lines[language]:
+                if line not in transcript:
                     continue
-                transcript_line = next(x for x in t.transcript.splitlines() if line in x)
+                transcript_line = next(x for x in transcript.splitlines() if line in x)
                 display_line = (line
                                 .replace('<!-- DUPLICATE ', '<<yellow>>')
                                 .replace('-->', '<<default>>'))
@@ -74,18 +75,19 @@ class DuplicateProcessor:
                                     .replace('-->', ''))
                 line_pairs.append((line, new_line))
             for line in line_pairs:
-                t.transcript = t.transcript.replace(line[0], line[1]).replace('  ', ' ')
+                transcript = transcript.replace(line[0], line[1]).replace('  ', ' ')
         except QuitKeyboardInterrupt:
             if line_pairs:
                 save = pywikibot.input_yn('Save changes so far?')
                 if save:
                     for line in line_pairs:
-                        t.transcript = t.transcript.replace(line[0], line[1]).replace('  ', ' ')
+                        transcript = transcript.replace(line[0], line[1]).replace('  ', ' ')
                     pywikibot.output('\nUser did not complete duplicate detection.\nChanges saved.\n')
                 else:
                     pywikibot.output('\nUser canceled duplicate detection.')
             else:
                 pywikibot.output('\nUser canceled duplicate detection.')
+        t.transcript_dict[language] = transcript
         return t
 
 
@@ -104,7 +106,7 @@ class DupeDetectionBot(SingleSiteBot, ExistingPageBot):
             self.opt.ep = self.opt.ts.ep
             self.opt.yt = self.opt.ts.yt
 
-    def get_wiki_transcript(self):
+    def get_wiki_transcript(self, language=DEFAULT_LANGUAGE):
         ep = self.opt.ep
         if not self.current_page or (self.current_page and self.current_page.title() == f'Transcript:{ep.code}'):
             self.current_page = (
@@ -112,27 +114,37 @@ class DupeDetectionBot(SingleSiteBot, ExistingPageBot):
                     self.site,
                     ep.transcript_redirects[-1])
                 ).getRedirectTarget()
+            if language != DEFAULT_LANGUAGE:
+                title = f"{self.current_page.title()}/{language}"
+                self.current_page = pywikibot.Page(self.site, title)
+        if not self.opt.ignore_existing and self.opt.ts:
+            self.opt.ts.transcript_dict[language] = self.current_page.text
 
-    def get_transcript(self):
+    def get_transcript(self, language=DEFAULT_LANGUAGE):
         if not self.opt.ts:
             self.get_wiki_transcript()
-            self.opt.ts = YoutubeTranscript().from_text(self.current_page.text)
+            self.opt.ts = YoutubeTranscript().download_and_build_transcript(language=language)
+            if not self.opt.ignore_existing:
+                self.opt.ts.transcript_dict[language] = self.current_page.text
         return self.opt.ts
 
-    def process_duplicates(self):
-        new_ts = DuplicateProcessor().process_duplicates(self.opt.ts)
+    def process_duplicates(self, language=DEFAULT_LANGUAGE):
+        new_ts = DuplicateProcessor().process_duplicates(self.opt.ts, language=language)
         # remove maintenance category if all duplicates removed
-        if 'DUPLICATE' not in new_ts.transcript:
-            new_ts.transcript = (new_ts.transcript
+        transcript = new_ts.transcript_dict[language]
+        if 'DUPLICATE' not in transcript:
+            new_ts.transcript_dict[language] = (transcript
                                  .replace('[[Category:Transcripts with duplicate lines]]',
+                                          '')
+                                 .replace(f'[[Category:Transcripts with duplicate lines/{language}]]',
                                           ''))
-        self.put_current(new_ts.transcript,
+        self.put_current(new_ts.transcript_dict[language],
                          summary='Fixing duplicate captions (via pywikibot)')
 
-    def treat_page(self) -> None:
+    def treat_page(self, language=DEFAULT_LANGUAGE) -> None:
         if not self.opt.ts:
             self.opt.ts = YoutubeTranscript(ep=self.opt.ep, yt=self.opt.yt)
-            self.opt.ts.download_and_build_transcript()
+            self.opt.ts.download_and_build_transcript(language=language)
         else:
             self.get_transcript_info()
         self.get_wiki_transcript()

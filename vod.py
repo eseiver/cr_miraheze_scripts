@@ -32,7 +32,9 @@ A number of maintenance activities can be performed together (-all) or independe
 
 -airdate_order    Add the episode id & airdate to Module:AirdateOrder/Array
 
--transcript       Create transcript page (auto-skips TRANSCRIPT_EXCLUSIONS)
+-transcript       Create transcript pages for English and other translations (auto-skips TRANSCRIPT_EXCLUSIONS)
+
+-no_translations  Only create the transcript page for English (auto-skips TRANSCRIPT_EXCLUSIONS)
 
 -transcript_list  Add transcript page to list of transcripts (auto-skips TRANSCRIPT_EXCLUSIONS)
 
@@ -123,7 +125,7 @@ from pywikibot.specialbots import UploadRobot
 import requests
 from cr_modules.cr import *
 from cr_modules.ep import *
-from cr_modules.transcript import YoutubeTranscript
+from cr_modules.transcript import YoutubeTranscript, DEFAULT_LANGUAGE
 from dupes import DupeDetectionBot
 
 
@@ -171,7 +173,8 @@ class EpisodeBot(
         'airdate_order': None,  # add to/update the airdate order
         'yt_switcher': None,  # add to/update the yt url switcher
         'ep_array': None,  # add to/update the ep array
-        'transcript': None,  # create episode transcript page (auto-skips TRANSCRIPT_EXCLUSIONS)
+        'transcript': None,  # create episode transcript pages (auto-skips TRANSCRIPT_EXCLUSIONS)
+        'no_translations': None,  # only create English transcript (auto-skips TRANSCRIPT_EXCLUSIONS)
         'transcript_list': None,  # add transcript page to list of transcripts (auto-skips TRANSCRIPT_EXCLUSIONS)
         'TRANSCRIPT_EXCLUSIONS': None, # calculated from Decoder. CxNN prefixes with no transcripts
         'ts': None, # YoutubeTranscript object
@@ -757,22 +760,58 @@ class EpListBot(EpisodeBot):
 
 
 class TranscriptBot(EpisodeBot):
-    '''For creating the transcript page by downloading and processing youtube captions.'''
+    '''For creating transcript pages by downloading and processing youtube captions.
+    Works for both English and all manually translated captions.'''
 
-    def build_transcript(self):
+    def build_transcripts(self, no_translations=None):
+        if no_translations is None:
+            no_translations = self.opt.no_translations
+        assert no_translations is not None
         ts = YoutubeTranscript(ep=self.opt.ep, yt=self.opt.yt, actor_data=ACTOR_DATA)
-        ts.download_and_build_transcript()
+        if no_translations:
+            ts.download_and_build_transcript()
+        else:
+            ts.download_all_language_transcripts()
         return ts
 
-    def treat_page(self):
+    def make_single_transcript(self, language=DEFAULT_LANGUAGE):
         url = 'Transcript:' + self.opt.new_page_name
         self.current_page = pywikibot.Page(self.site, url)
-        ts = self.build_transcript()
-        self.opt.ts = ts
+        ts = self.build_transcripts(no_translations=True)
         if self.current_page.exists() and self.current_page.text:
-            pywikibot.output(f'Transcript page already exists for {self.opt.new_page_name}; transcript creation skipped')
+            # if existing transcript page, replace transcript in transcript_dict
+            # all duplicate line detection and .json should still be the same
+            pywikibot.output(f'Transcript page already exists for {self.opt.new_page_name}; creation skipped')
+            ts.transcript_dict[language] = self.current_page.text
         else:
-            self.put_current(ts.transcript, summary=f"Creating {self.opt.ep.code} transcript (via pywikibot)")
+            self.put_current(ts.transcript_dict.get(language),
+                             summary=f"Creating {self.opt.ep.code} transcript (via pywikibot)")
+        self.opt.ts = ts
+
+    def make_all_transcripts(self):
+        ts = self.build_transcripts(no_translations=False)
+        for language, transcript in ts.transcript_dict.items():
+            if language == DEFAULT_LANGUAGE:
+                url = 'Transcript:' + self.opt.new_page_name
+            else:
+                url = f'Transcript:{self.opt.new_page_name}/{language}'
+
+            self.current_page = pywikibot.Page(self.site, url)
+            if self.current_page.exists() and self.current_page.text:
+                # if existing transcript page, replace in dict
+                pywikibot.output(f'{language} transcript page already exists for {self.opt.new_page_name}; creation skipped')
+                ts.transcript_dict[language] = self.current_page.text
+            else:
+                self.put_current(transcript,
+                                 summary=f"Creating {self.opt.ep.code} {language} transcript (via pywikibot)")
+        self.opt.ts = ts
+
+
+    def treat_page(self):
+        if self.opt.no_translations:
+            self.make_single_transcript()
+        else:
+            self.make_all_transcripts()
 
 
 class TranscriptListBot(EpisodeBot):
@@ -1226,6 +1265,10 @@ def main(*args: str) -> None:
         elif not options.get(task):
             options[task] = False
 
+    # handle optional no_translations flag
+    if not options.get('no_translations'):
+        options['no_translations'] = False
+
     # get user input for required values that were not passed in.
     # only required if certain tasks will be conducted
     required_options = ['ep', 'yt', 'new_ep_name', 'runtime', 'actors']
@@ -1386,21 +1429,23 @@ def main(*args: str) -> None:
                 bot9.treat_page()
                 if bot9.opt.ts:
                     options['ts'] = bot9.opt.ts
-                bot9 = TranscriptRedirectBot(generator=gen, **options)
-                bot9.treat_page()
+                bot10 = TranscriptRedirectBot(generator=gen, **options)
+                bot10.treat_page()
 
         if options.get('ts'):
-            dupe_count = len(options['ts'].dupe_lines)
-            if dupe_count:
+            dupe_count = len(options['ts'].dupe_lines[DEFAULT_LANGUAGE])
+            if dupe_count and '<!-- DUPLICATE' in options['ts'].transcript_dict[DEFAULT_LANGUAGE]:
                 dupes = pywikibot.input_yn(f'Process {dupe_count} duplicate captions in transcript now?')
+                has_dupes = True
             else:
                 dupes = False
+                has_dupes = False
                 pywikibot.output('No duplicates found in transcript to process.')
             if dupes:
-                bot10 = DupeDetectionBot(generator=gen, **options)
-                bot10.current_page = pywikibot.Page(bot10.site, f"Transcript:{options['new_ep_name']}")
-                bot10.treat_page()
-            else:
+                bot11 = DupeDetectionBot(generator=gen, **options)
+                bot11.current_page = pywikibot.Page(bot11.site, f"Transcript:{options['new_ep_name']}")
+                bot11.treat_page()
+            elif has_dupes:
                 command = f"\n<<yellow>>python pwb.py dupes -ep:{options['ep'].code} -yt:{options['yt'].yt_id}<<default>>"
                 pywikibot.output(f'Skipping ts duplicate processing. You can run this later:{command}')
 
@@ -1408,15 +1453,15 @@ def main(*args: str) -> None:
             if options['ep'].prefix in TRANSCRIPT_EXCLUSIONS:
                 pywikibot.output(f'\nSkipping transcript list update for {options["ep"].show} episode')
             else:
-                bot11 = TranscriptListBot(generator=gen, **options)
-                bot11.treat_page()
+                bot12 = TranscriptListBot(generator=gen, **options)
+                bot12.treat_page()
 
         if options.get('long_short'):
             if options['ep'].prefix == '4SD':
                 pywikibot.output(f'\nSkipping longest/shortest for {options["ep"].show} episode')
             else:
-                bot12 = LongShortBot(generator=gen, **options)
-                bot12.treat_page()
+                bot13 = LongShortBot(generator=gen, **options)
+                bot13.treat_page()
 
 
 if __name__ == '__main__':
