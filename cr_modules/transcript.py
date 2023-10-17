@@ -482,13 +482,16 @@ class YoutubeTranscript:
 
         # Step 7: add navigation and category
         t_cat = f"Category:{self.ep.transcript_category}"
+        t_dupe_cat = f"Category:Transcripts with duplicate lines"
         if language != DEFAULT_LANGUAGE:
             t_cat += f"/{language}"
+            t_dupe_cat += f"/{language}"
+
         ts = ''.join(['{{Transcript-Nav}}\n__FORCETOC__\n\n', 
                       ts,
                       '\n{{Transcript-Nav}}\n', 
                       f'[[{t_cat}]]',
-                      '\n[[Category:Transcripts with duplicate lines]]'])
+                      f'\n[[{t_dupe_cat}]]'])
 
         if self.write_ts_file:
             os.makedirs(self.transcript_folder, exist_ok=True)

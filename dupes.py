@@ -135,6 +135,8 @@ class DupeDetectionBot(SingleSiteBot, ExistingPageBot):
         if 'DUPLICATE' not in transcript:
             new_ts.transcript_dict[language] = (transcript
                                  .replace('[[Category:Transcripts with duplicate lines]]',
+                                          '')
+                                 .replace(f'[[Category:Transcripts with duplicate lines/{language}]]',
                                           ''))
         self.put_current(new_ts.transcript_dict[language],
                          summary='Fixing duplicate captions (via pywikibot)')
