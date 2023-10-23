@@ -299,8 +299,8 @@ class YoutubeTranscript:
 
             if (not during_intro and
                 not intro_done and
-                (re.search("♪ It's Thursday night ♪", line)) or
-                "♪ critical" in line.strip().lower()):
+                (re.search("♪ It's Thursday night ♪", line) or
+                "♪ critical" in line.strip().lower())):
                 if during_intro:
                     print(f'error finding intro for {self.ep}')
                 during_intro = True
@@ -482,10 +482,14 @@ class YoutubeTranscript:
 
         # Step 7: add navigation and category
         t_cat = f"Category:{self.ep.transcript_category}"
-        t_dupe_cat = f"Category:Transcripts with duplicate lines"
-        if language != DEFAULT_LANGUAGE:
-            t_cat += f"/{language}"
-            t_dupe_cat += f"/{language}"
+        if self.dupe_lines.get(language):
+            # add duplicate category if duplicate lines found
+            t_dupe_cat = f"Category:Transcripts with duplicate lines"
+            if language != DEFAULT_LANGUAGE:
+                t_cat += f"/{language}"
+                t_dupe_cat += f"/{language}"
+        else:
+            t_dupe_cat = ''
 
         ts = ''.join(['{{Transcript-Nav}}\n__FORCETOC__\n\n', 
                       ts,
