@@ -43,6 +43,11 @@ class LuaReader:
     def download_json(self):
         site = pywikibot.Site()
         _json = json.loads(site.expand_text(f'{{{{#invoke:Json exporter|dump_as_json|Module:{self.module_name}}}}}'))
+        _json = self.custom_cleanup(_json)
+        return _json
+
+    def custom_cleanup(self, _json):
+        '''For specific modules, replace with whatever is needed here'''
         return _json
 
     def create_from_json_file(self):
@@ -50,21 +55,29 @@ class LuaReader:
             _json = json.load(f)
         return _json
 
+
+@dataclass
+class EpisodeReader(LuaReader):
+    '''Read-only information about episodes.'''
+    module_name: str = 'Ep/Array'
+    json_filename: str = 'episodes.json'
+
+    def custom_cleanup(self, _json):
+        '''Custom cleanup for episode data.'''
+        copied_json = deepcopy(_json)
+        for k, v in copied_json.items():
+            v['pagename'] = v.get('pagename', v['title'])
+        return copied_json
+
+
 @dataclass
 class Decoder(LuaReader):
     '''Information about every (active) campaign, series, and season.'''
     module_name: str = 'Ep/Decoder'
     json_filename: str = 'decoder.json'
 
-    def download_json(self):
-        self._json = super().download_json()
-        _json = self.fix_seasons()
-        return _json
-
-    def fix_seasons(self, _json=None):
+    def custom_cleanup(self, _json):
         '''When downloading .json, Lua removes season numbers. Restores them as dict.'''
-        if _json is None:
-            _json = self._json
         copied_json = deepcopy(_json)
         for k, v in dict(copied_json).items():
             if v.get('seasons'):
