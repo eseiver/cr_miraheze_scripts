@@ -8,6 +8,72 @@ from string import ascii_lowercase
 
 import pywikibot
 
+# TO DO: Campaign class outside of Ep class
+
+MAIN_CHARACTER_DICT = {
+    'Campaign 1': [
+        'Grog Strongjaw',
+        'Keyleth',
+        'Percival de Rolo',
+        'Pike Trickfoot',
+        'Scanlan Shorthalt',
+        # 'Taryon Darrington',
+        # 'Tiberius Stormwind',
+        "Vax'ildan",
+        "Vex'ahlia",
+        'Trinket',
+    ],
+    'Campaign 2': [
+        'Beauregard Lionett',
+        'Caduceus Clay',
+        'Caleb Widogast',
+        'Fjord',
+        'Jester Lavorre',
+        # 'Mollymauk Tealeaf',
+        'Veth Brenatto',
+        'Yasha Nydoorin',
+        'Frumpkin',
+    ],
+    'Campaign 3': [
+        'Ashton Greymoore',
+        'Bertrand Bell',
+        "Chetney Pock O'Pea",
+        'Fearne Calloway',
+        'Fresh Cut Grass',
+        'Imogen Temult',
+        'Laudna',
+        'Orym',
+        'Little Mister',
+        'Dorian Storm',
+    ],
+    'Exandria Unlimited': [
+        'Dorian Storm',
+        'Orym',
+        'Fearne Calloway',
+        # "Fy'ra Rai",
+        'Opal',
+        'Dariax Zaveon',
+    ],
+    'Exandria Unlimited: Calamity': [
+        'Cerrit Agrupnin',
+        'Laerryn Coramar-Seelie',
+        'Loquatius Seelie',
+        'Nydas Okiro',
+        "Patia Por'co",
+        'Zerxus Ilerez',
+    ],
+    'The Legend of Vox Machina': [
+        'Grog Strongjaw',
+        'Keyleth',
+        'Percival de Rolo',
+        'Pike Trickfoot',
+        'Scanlan Shorthalt',
+        'Taryon Darrington',
+        "Vax'ildan",
+        "Vex'ahlia",
+    ],
+}
+
 DATA_PATH = '/'.join([pywikibot.config.user_script_paths[0], 'data'])
 os.makedirs(DATA_PATH, exist_ok=True)
 
