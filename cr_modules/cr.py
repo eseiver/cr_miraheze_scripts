@@ -4,7 +4,7 @@ import re
 import sys
 
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -502,3 +502,73 @@ def get_validated_input(regex, arg, value='', attempts=3, req=True,
         if req:
             sys.exit()
     return value
+
+
+class pyPage(pywikibot.Page):
+    '''Extends Page class to have more wikicode features.'''
+    @property
+    def wikicode(self):
+        if not hasattr(self, '_wikicode') or self._wikicode is None:
+            self._wikicode = mwparserfromhell.parse(self.text)
+        return self._wikicode
+
+    @property
+    def infobox(self):
+        if not hasattr(self, '_infobox') or self._infobox is None:
+            self._infobox = next((x for x in self.wikicode.filter_templates() if 'infobox' in x.name.lower()), None)
+        return self._infobox
+
+    @property
+    def intro(self):
+        return self.wikicode.get_sections()[0]
+
+    @property
+    def headings(self):
+        return ['intro'] + [x.title.strip() for x in self.wikicode.filter_headings()]
+
+    @property
+    def toc(self):
+        return self.get_toc()
+
+    def get_toc(self, wikicode=None):
+        # Generate the table of contents (TOC) based on the parsed wikicode
+        if wikicode is None:
+            wikicode = self.wikicode
+            toc = ['intro']
+        else:
+            toc = []
+        for section in wikicode.get_sections():
+            if section.filter_headings():
+                toc.append(section.filter_headings()[0].title.strip())
+        return toc
+    
+
+    def get_subsections(self, heading, wikicode=None):
+        if wikicode is None:
+            wikicode = self.wikicode
+        head = None
+        subsections = []
+        for i, h in enumerate(wikicode.filter_headings()):
+            if h.title.matches(heading):
+                head = h
+                break
+        if not head:
+            return []
+        for i, h in enumerate(wikicode.filter_headings()[i+1:]):
+            if h.level > head.level:
+                subsections.append(h.title.strip())
+            else:
+                break
+        return subsections
+
+    def get_section_by_heading(self, heading, wikicode=None):
+        if wikicode is None:
+            wikicode = self.wikicode
+        if heading == 'intro':
+            return wikicode.get_sections()[0]
+        for section in wikicode.get_sections():
+            if not section.filter_headings():
+                continue
+            if section.filter_headings()[0].title.matches(heading):
+                return section
+        return ''
