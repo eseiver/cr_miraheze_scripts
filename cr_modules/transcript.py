@@ -475,7 +475,7 @@ class YoutubeTranscript:
             speaker_tags = self.actor_data.speaker_tags
         if not any(tag in ts for tag in speaker_tags):
             ts = f'{{{{cleanup|speaker tags not found}}}}\n\n{ts}'
-            pywikibot.output("No speaker tags found in transcript; tagged for cleanup.")
+            pywikibot.output(f"No speaker tags found in transcript {self.ep} in {language}; tagged for cleanup.")
 
         # Step 6: add commented_out error messages to top of transcript
         ts = self.process_errors(ts, language=language)
