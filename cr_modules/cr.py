@@ -519,10 +519,6 @@ class pyPage(pywikibot.Page):
         return self._infobox
 
     @property
-    def intro(self):
-        return self.wikicode.get_sections()[0]
-
-    @property
     def headings(self):
         return ['intro'] + [x.title.strip() for x in self.wikicode.filter_headings()]
 
@@ -541,7 +537,6 @@ class pyPage(pywikibot.Page):
             if section.filter_headings():
                 toc.append(section.filter_headings()[0].title.strip())
         return toc
-    
 
     def get_subsections(self, heading, wikicode=None):
         if wikicode is None:

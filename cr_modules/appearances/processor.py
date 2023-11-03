@@ -1,6 +1,5 @@
 import pywikibot
 from pywikibot import pagegenerators
-from datetime import datetime
 from pywikibot.data.api import Request
 
 from ..cr import pyPage

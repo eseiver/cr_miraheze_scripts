@@ -10,6 +10,7 @@ from .character import pyCharacter
 from .logger_config import logger 
 from .processor import CharacterManager
 
+
 HEADING_CONVERTER = {
     'Mentioned': 'mention',
     'Mention': 'mention',
@@ -54,7 +55,7 @@ class pyEpisode(pyPage):
 
     def pre_get(cls):
         if not hasattr(cls, '_episodes_data') or not cls._episodes_data:
-            episodes_data = EpisodeReader()
+            episodes_data = EpisodeReader(force_download=True)
             episodes_data.download_json()
             cls._episodes_data = episodes_data._json
 
