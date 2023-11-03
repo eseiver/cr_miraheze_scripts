@@ -67,6 +67,10 @@ class pyEpisode(pyPage):
         return data
 
     @property
+    def campaign_pcs(self):
+        return self.episode_code.campaign.main_characters
+
+    @property
     def featured_characters_section(self):
         return self.get_section_by_heading('Featured characters')
 
@@ -76,7 +80,16 @@ class pyEpisode(pyPage):
             fcp = FeaturedCharactersParser(fc_section=self.featured_characters_section,
                                pagename=self.title())
             fcp.parse()
-            self._character_dicts = [x for x in fcp.appearance_dict if x]
+            character_dicts = []
+            for ad in fcp.appearance_dict:
+                if not ad:
+                    continue
+                if ad['name'] in self.campaign_pcs:
+                    ad['campaign_pc'] = True
+                else:
+                    ad['campaign_pc'] = False
+                character_dicts.append(ad)
+            self._character_dicts = character_dicts
         return self._character_dicts
 
     @property
@@ -106,8 +119,8 @@ class pyEpisode(pyPage):
             if not isinstance(page, pyCharacter):
                 logger.info(f'{page.title()}: page not is character')
                 continue
-            if char_dict.get('campaign_pc'):
-                logger.debug(f'{page.title()}: skipping player character')
+            if char_dict.get('campaign_pc') and char_dict.get('status') == 'appear':
+                logger.debug(f'{page.title()}: skipping standard campaign PC appearance')
                 continue
             if not self.episode_code.code in page.episodes:
                 no_errors = False
@@ -271,16 +284,16 @@ class FeaturedCharactersParser:
         if self.work_type == 'episode':
             if converted_heading == 'Player characters':
                 name_info.update({
-                'campaign_pc': True,
+                'is_pc': True,
                 })
             elif heading == 'New':
                 name_info.update({
-                'campaign_pc': False,
+                'is_pc': False,
                 })
                 name_info['modifiers'].append('1st app')
             else: 
                 name_info.update({
-                'campaign_pc': False,
+                'is_pc': False,
                 })
 
         if not name_info.get('raw_description'):

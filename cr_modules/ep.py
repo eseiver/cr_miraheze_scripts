@@ -8,8 +8,6 @@ from string import ascii_lowercase
 
 import pywikibot
 
-# TO DO: Campaign class outside of Ep class
-
 MAIN_CHARACTER_DICT = {
     'Campaign 1': [
         'Grog Strongjaw',
@@ -584,6 +582,13 @@ class Ep:
             return True
         else:
             return False
+
+    @property
+    def main_characters(self):
+        if self.is_campaign:
+            return MAIN_CHARACTER_DICT[self.show]
+        else:
+            return []
 
     @property
     def ce_codes(self):
