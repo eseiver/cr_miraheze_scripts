@@ -2,11 +2,11 @@ import pywikibot
 from pywikibot import pagegenerators
 from datetime import datetime
 from pywikibot.data.api import Request
-import logging
-logger = logging.Logger('cr wiki')
 
 from ..cr import pyPage
 from .character import pyCharacter
+from .logger_config import logger 
+
 
 class BulkWikiProcessor:
     def __init__(self, titles):
@@ -73,10 +73,10 @@ class CharacterManager:
             # Update the cache with the fetched character pages
             for title, page in character_pages.items():
                 self.character_cache[title] = page
-        
-        print('current character cache!!!!', len(self.character_cache))
-        print('why not here?!', [x for x in character_titles if x not in self.character_cache])
-        print('curiouser and curiouser', [x for x in self.character_cache if x not in character_titles])
+
+        logger.info(f'current character cache: {len(self.character_cache)}')
+        logger.debug(f'why not here?!, {[x for x in character_titles if x not in self.character_cache]}')
+        logger.debug(f'curiouser and curiouser {[x for x in self.character_cache if x not in character_titles]}')
 
         return {title: self.character_cache.get(title) for title in character_titles}
 

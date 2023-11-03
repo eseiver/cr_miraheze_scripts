@@ -1,5 +1,3 @@
-import logging
-logger = logging.Logger('cr wiki')
 import re
 from dataclasses import dataclass, field
 
@@ -9,6 +7,7 @@ from tqdm import tqdm
 from ..cr import pyPage
 from ..ep import EpisodeReader, Ep
 from .character import pyCharacter
+from .logger_config import logger 
 from .processor import CharacterManager
 
 HEADING_CONVERTER = {

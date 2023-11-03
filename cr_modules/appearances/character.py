@@ -1,5 +1,3 @@
-import logging
-logger = logging.Logger('cr wiki')
 import re
 from copy import deepcopy
 
