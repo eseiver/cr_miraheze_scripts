@@ -42,7 +42,11 @@ class LuaReader:
 
     def download_json(self):
         site = pywikibot.Site()
-        _json = json.loads(site.expand_text(f'{{{{#invoke:Json exporter|dump_as_json|Module:{self.module_name}}}}}'))
+        _json = json.loads(
+            site.expand_text(
+                f'{{{{#invoke:Json exporter|dump_as_json|Module:{self.module_name}}}}}'
+                )
+            )
         _json = self.custom_cleanup(_json)
         return _json
 
@@ -66,8 +70,8 @@ class EpisodeReader(LuaReader):
         '''Custom cleanup for episode data.'''
         copied_json = deepcopy(_json)
         for k, v in copied_json.items():
-            v['pagename'] = v.get('pagename', v['title'])
-        return copied_json
+            _json[k]['pagename'] = v.get('pagename', v['title'])
+        return _json
 
 
 @dataclass
@@ -114,21 +118,27 @@ def build_prefix_regex(episode_decoder=None):
 
 # EP_REGEX = build_prefix_regex(episode_decoder=EPISODE_DECODER) + 'x\d+(a|b)?$'  # https://regex101.com/r/QXhVhb/4
 
+# TO DO: make Ep __init__ use '0x00' as default code for any invalid input (matching modules on wiki)
+
 class Ep:
     '''for handling episode ids'''
     def __init__(self, episode_code, padding_limit=2, episode_decoder=None):
         episode_code = episode_code.strip()
-        self.code = self.standardize_code(episode_code)
         if not episode_decoder:
-            self.episode_decoder = EPISODE_DECODER
+            full_episode_decoder = EPISODE_DECODER
         else:
-            self.episode_decoder = episode_decoder
-        self.ep_regex = build_prefix_regex(episode_decoder=self.episode_decoder)
-        assert re.match(self.ep_regex, episode_code, flags=re.IGNORECASE), f"{episode_code} not valid. Check Module:Ep/Decoder and data/decoder.json"
+            full_episode_decoder = episode_decoder
+        self.ep_regex = build_prefix_regex(episode_decoder=full_episode_decoder)
+        self._full_episode_decoder = full_episode_decoder
+        assert re.match(
+            self.ep_regex,
+            episode_code,
+            flags=re.IGNORECASE), f'"{episode_code}" not valid. Check Module:Ep/Decoder and data/decoder.json'
+
+        self.code = self.standardize_code(episode_code)
         self._code = episode_code
         self.padding_limit = padding_limit
         self.max_letter = 'b'
-
 
     def __repr__(self):
         return self.code
@@ -153,11 +163,18 @@ class Ep:
         return standardized_code
 
     @property
+    def campaign_data(self):
+        if not hasattr(self, '_campaign_data') or self._campaign_data is None:
+            campaign_data = self._full_episode_decoder[self.prefix]
+            self._campaign_data = campaign_data
+        return self._campaign_data
+
+    @property
     def ends_in_letter(self):
-        if self.code[-1].isdigit():
-            return False
-        else:
+        if self.code[-1].isalpha():
             return True
+        else:
+            return False
 
     @property
     def full_prefix(self):
@@ -166,10 +183,11 @@ class Ep:
 
     @property
     def prefix(self):
-        if self.is_campaign or not self.full_prefix[-1].isdigit():
-            return self.full_prefix
+        if self.is_campaign:
+            prefix = self.full_prefix
         else:
-            return self.full_prefix[:-1]
+            prefix = re.sub(r'\d+$', '', self.full_prefix)
+        return prefix
 
     @property
     def number(self):
@@ -182,48 +200,66 @@ class Ep:
 
     @property
     def show(self):
-        return self.episode_decoder[self.prefix]['title']
+        return self.campaign_data['title']
 
     @property
     def season(self):
         season = ''
-        if self.episode_decoder[self.prefix].get('seasons'):
-            assert self.full_prefix[-1].isdigit()
-            season = self.full_prefix[-1]
+        if self.campaign_data.get('seasons'):
+            season = re.search('\d+$', self.full_prefix)
         return season
 
     @property
     def season_name(self):
         season_name = ''
         if self.season:
-            season_name = self.episode_decoder[self.prefix]['seasons'][self.season]['page']
+            season_name = self.campaign_data['seasons'][self.season]['page']
             if not season_name:
                 season_name = f"Season {self.season}"
         return season_name
 
     @property
+    def arc_data(self):
+        if not hasattr(self, '_arc_data') or self._arc_data is None:
+            arc = {}
+            if self.campaign_data.get('arcs'):
+                arcs = self.campaign_data['arcs']
+                for arc in arcs:
+                    if self.number > arc['endEpisode']:
+                        continue
+                    else:
+                        break
+            self._arc_data = arc
+        return self._arc_data
+
+    @property
+    def arc(self):
+        if self.arc_data:
+            return self.arc_data.get('arcNum')
+        else:
+            return ''
+
+    @property
     def list_page(self):
-        return self.episode_decoder[self.prefix].get('listLink', self.show)
+        return self.campaign_data.get('listLink', self.show)
 
     @property
     def thumbnail_page(self):
-        return self.episode_decoder[self.prefix].get('thumbnailCategory', 'Episode thumbnails')
+        return self.campaign_data.get('thumbnailCategory', 'Episode thumbnails')
 
     @property
     def latest(self):
         '''The name in Module:Ep/Array that denotes the latest episode for this show'''
-        return self.episode_decoder[self.prefix].get('latest')
+        return self.campaign_data.get('latest')
 
     @property
     def navbox_name(self):
-        navbox = (self.episode_decoder[self.prefix]['navbox']
-                  if self.episode_decoder[self.prefix].get('navbox')
-                  else f"Nav-{self.prefix}")
+        navbox = self.campaign_data.get('navbox', f"Nav-{self.prefix}")
         return navbox
 
     @property
     def transcript_category(self):
-        return self.episode_decoder[self.prefix].get('transcriptCategory', 'Transcripts')
+        return self.campaign_data.get('transcriptCategory', 'Transcripts')
 
     @property
     def image_filename(self):
