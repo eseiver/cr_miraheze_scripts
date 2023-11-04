@@ -122,18 +122,21 @@ def build_prefix_regex(episode_decoder=None):
 
 class Ep:
     '''for handling episode ids'''
-    def __init__(self, episode_code, padding_limit=2, episode_decoder=None):
+    def __init__(self, episode_code, padding_limit=2, ep_regex=None):
         episode_code = episode_code.strip()
-        if not episode_decoder:
-            full_episode_decoder = EPISODE_DECODER
+
+        if not ep_regex:
+            self.ep_regex = EP_REGEX
         else:
-            full_episode_decoder = episode_decoder
-        self.ep_regex = build_prefix_regex(episode_decoder=full_episode_decoder)
-        self._full_episode_decoder = full_episode_decoder
-        assert re.match(
-            self.ep_regex,
-            episode_code,
-            flags=re.IGNORECASE), f'"{episode_code}" not valid. Check Module:Ep/Decoder and data/decoder.json'
+            self.ep_regex = ep_regex
+
+        try:
+            assert re.match(
+                self.ep_regex,
+                episode_code,
+                flags=re.IGNORECASE)
+        except AssertionError:
+            logger.info(f'"{episode_code}" not valid. Check Module:Ep/Decoder and data/decoder.json')
 
         self.code = self.standardize_code(episode_code)
         self._code = episode_code
@@ -141,7 +144,7 @@ class Ep:
         self.max_letter = 'b'
 
     def __repr__(self):
-        return self.code
+        return f'Ep({self.code})'
 
     def __eq__(self, other):
         if isinstance(other, Ep):
@@ -163,9 +166,11 @@ class Ep:
         return standardized_code
 
     @property
-    def campaign_data(self):
+    def campaign_data(self, episode_decoder=None):
         if not hasattr(self, '_campaign_data') or self._campaign_data is None:
-            campaign_data = self._full_episode_decoder[self.prefix]
+            if episode_decoder is None:
+                episode_decoder = EPISODE_DECODER
+            campaign_data = episode_decoder[self.prefix]
             self._campaign_data = campaign_data
         return self._campaign_data
 
