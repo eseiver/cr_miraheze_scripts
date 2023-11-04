@@ -67,7 +67,7 @@ class CharacterManager:
             character_downloader = BulkWikiProcessor(characters_to_fetch)
             character_downloader.run()
             character_pages = character_downloader.pages
-            print('character pages!!!!', len(character_pages))
+            logger.debug(f'new character pages!!!! {len(character_pages)}')
 
             # Update the cache with the fetched character pages
             for title, page in character_pages.items():

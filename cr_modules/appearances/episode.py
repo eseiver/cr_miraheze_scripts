@@ -179,8 +179,11 @@ class FeaturedCharactersParser:
         divided_characters_cleaned = {}
 
         for k, v in divided_characters.items():
-            if k not in HEADING_CONVERTER.keys() and self.work_type == 'episode':
-                logger.debug(f"WAYWARD K!!! {self.pagename} {k}")
+            if (k not in HEADING_CONVERTER.keys() and
+                self.work_type == 'episode' and
+                k != 'Featured characters'
+                ):
+                logger.debug(f"WAYWARD HEADING!!! {self.pagename} {k}")
                 continue
             # else:
             #     new_heading = heading_replacement_dict[k.strip()]
@@ -281,6 +284,7 @@ class FeaturedCharactersParser:
             'modifiers': [],
         })
 
+        # potentially conflicts with pyCharacter, which gets is_pc from character infobox
         if self.work_type == 'episode':
             if converted_heading == 'Player characters':
                 name_info.update({

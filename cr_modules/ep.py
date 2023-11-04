@@ -585,10 +585,7 @@ class Ep:
 
     @property
     def main_characters(self):
-        if self.is_campaign:
-            return MAIN_CHARACTER_DICT[self.show]
-        else:
-            return []
+        return MAIN_CHARACTER_DICT.get(self.show, [])
 
     @property
     def ce_codes(self):
