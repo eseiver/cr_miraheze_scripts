@@ -53,6 +53,7 @@ class pyEpisode(pyPage):
                 self._episode_code = ''
         return self._episode_code
 
+    @classmethod
     def pre_get(cls):
         if not hasattr(cls, '_episodes_data') or not cls._episodes_data:
             episodes_data = EpisodeReader(force_download=True)
@@ -179,11 +180,11 @@ class FeaturedCharactersParser:
         divided_characters_cleaned = {}
 
         for k, v in divided_characters.items():
-            if (k not in HEADING_CONVERTER.keys() and
-                self.work_type == 'episode' and
-                k != 'Featured characters'
+            if ((k not in HEADING_CONVERTER.keys() and
+                self.work_type == 'episode') or
+                k == 'Featured characters'
                 ):
-                logger.debug(f"WAYWARD HEADING!!! {self.pagename} {k}")
+                logger.debug(f"Ignored heading: {k} ({self.pagename})")
                 continue
             # else:
             #     new_heading = heading_replacement_dict[k.strip()]

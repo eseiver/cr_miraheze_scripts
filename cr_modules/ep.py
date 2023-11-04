@@ -201,7 +201,6 @@ class Decoder(LuaReader):
                     _json[k]['seasons'][str(i+1)] = season
         return _json
 
-
 decoder = Decoder()
 EPISODE_DECODER = decoder._json
 

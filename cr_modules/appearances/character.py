@@ -2,13 +2,21 @@ import re
 from copy import deepcopy
 
 from ..cr import pyPage
-from ..ep import Ep
+from ..ep import Ep, EP_REGEX, EpisodeReader
 from .logger_config import logger
 
 INFOBOX_APP_PARAM_NAMES = ['First', 'Last', 'Stream', 'Television', 'Comic', 'Other']
 
 
 class pyCharacter(pyPage):
+
+    @classmethod
+    def pre_get(cls):
+        if not hasattr(cls, '_conversion_dict') or not cls._conversion_dict:
+            episodes_data = EpisodeReader()
+            episodes_data.download_json()
+            cls._conversion_dict = episodes_data.create_ep_conversion_dict()
+
     @property
     def appearances_section(self):
         return self.get_section_by_heading('Appearances and mentions')
@@ -32,6 +40,7 @@ class pyCharacter(pyPage):
         return self._appearances
 
     def get_appearances(self):
+        self.pre_get()
         appearance_dicts = []
         if not self.appearances_section:
             return appearance_dicts
@@ -74,7 +83,12 @@ class pyCharacter(pyPage):
 
     @property
     def episodes(self):
-        return [Ep(x['work']).code for x in self.appearances]
+        eps = [x['work'] if re.match(EP_REGEX, x['work'])
+        else self._conversion_dict.get(x['work'].lower(), '').get('episode_code', '')
+        if self._conversion_dict.get(x['work'].lower()) else ''
+        for x in self.appearances]
+        eps = [Ep(ep).code for ep in eps if ep]
+        return eps
 
 
 def process_plainlist(wikicode):
