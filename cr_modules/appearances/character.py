@@ -2,6 +2,7 @@ import re
 from copy import deepcopy
 
 from ..cr import pyPage
+from ..ep import Ep
 from .logger_config import logger
 
 INFOBOX_APP_PARAM_NAMES = ['First', 'Last', 'Stream', 'Television', 'Comic', 'Other']
@@ -73,7 +74,7 @@ class pyCharacter(pyPage):
 
     @property
     def episodes(self):
-        return [x['work'] for x in self.appearances]
+        return [Ep(x['work']).code for x in self.appearances]
 
 
 def process_plainlist(wikicode):
