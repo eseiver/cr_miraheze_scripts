@@ -184,7 +184,7 @@ def make_image_file_description(ep: Ep, actors: Actors) -> str:
 == Licensing ==
 {{{{Fairuse}}}}
 
-[[Category:{ep.thumbnail_page}]]"""
+[[Category:{ep.campaign.thumbnail_category}]]"""
     return file_description
 
 

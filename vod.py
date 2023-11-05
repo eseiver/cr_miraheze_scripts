@@ -392,8 +392,8 @@ class EpisodeBot(
             and does_value_exist(infobox, param_name='Image')):
             infobox['Caption'] = make_image_caption(actors=self.opt.actors, ep=ep)
 
-        if not any([x.name.matches(ep.navbox_name) for x in wikicode.filter_templates()]):
-            wikicode.append('\n' + f"{{{{{ep.navbox_name}}}}}")
+        if not any([x.name.matches(ep.campaign.navbox) for x in wikicode.filter_templates()]):
+            wikicode.append('\n' + f"{{{{{ep.campaign.navbox}}}}}")
 
         if self.opt.episode_summary:
             wikicode = self.update_summary(wikicode=wikicode)
@@ -588,7 +588,7 @@ class EpArrayBot(EpisodeBot):
         new_dict = self.update_new_dict(new_dict, current_dict)
 
         # Make sure that for relevant episode codes it is also the latest
-        latest = ep.latest
+        latest = ep.campaign.latest
         if latest and latest not in new_dict['altTitles']:
             text = re.sub(fr'{latest}(, )?', '', text)
             new_dict['altTitles'].append(latest)
@@ -685,7 +685,7 @@ class EpListBot(EpisodeBot):
         ep = self.opt.ep
         prev_ep = ep.get_previous_episode()
 
-        list_page_name = ep.list_page
+        list_page_name = ep.campaign.list_link
         if not list_page_name:
             list_page_name = pywikibot.input(f"Please enter name of list of episodes page for {ep.code}")
 
@@ -943,7 +943,7 @@ class NavboxBot(EpisodeBot):
     '''Makes sure the episode code appears on the accompanying navbox'''
 
     def treat_page(self):
-        navbox_name = f'Template:{self.opt.ep.navbox_name}'
+        navbox_name = f'Template:{self.opt.ep.campaign.navbox}'
         ep = self.opt.ep
 
         self.current_page = pywikibot.Page(self.site, navbox_name)
@@ -1041,7 +1041,7 @@ class AirdateBot(EpisodeBot):
         self.opt.airdate_dict = airdate_dict
 
         if ep.code not in text:
-            prev_ep = Ep(self.get_previously_aired_episode(), episode_decoder=EPISODE_DECODER)
+            prev_ep = Ep(self.get_previously_aired_episode())
             prev_entry = next(x for x in text.splitlines() if prev_ep.code in x)
             text = text.replace(prev_entry,
                                 '\n'.join([prev_entry, new_entry])
@@ -1072,7 +1072,7 @@ class Connect4SDBot(AirdateBot, EpArrayBot):
             affected_episodes = eps[(eps.index(prev_4SD.code)+1):]
         if restrict_c3:
             affected_episodes = [x for x in affected_episodes
-                                 if Ep(x, episode_decoder=EPISODE_DECODER).prefix == '3']
+                                 if Ep(x).prefix == '3']
         affected_pages = ([array_dict['pagename'] if array_dict.get('pagename')
                            else array_dict['title'] for array_dict in array_dicts
                            if array_dict['epcode'] in affected_episodes])
@@ -1120,7 +1120,7 @@ class LongShortBot(EpisodeBot):
             y.title.matches('Longest episodes') for y in x.filter_headings()]))
         longest_overall = longest.get_sections(flat=True)[1]
         relevant_section = next((section for section in longest.get_sections(flat=True)[2:]
-                        if ep.show.lower() in section.filter_headings()[0].title.lower()),
+                        if ep.show.title.lower() in section.filter_headings()[0].title.lower()),
                        '')
         for section in [relevant_section, longest_overall]:
             if not section:
@@ -1148,7 +1148,7 @@ class LongShortBot(EpisodeBot):
         if not ep.is_campaign:
             shortest_overall = mwparserfromhell.parse(shortest_overall.split('Shortest episodes, exclud')[0])
         relevant_section = next((section for section in shortest.get_sections(flat=True)[2:]
-                                if ep.show.lower() in section.filter_headings()[0].title.lower()),
+                                if ep.show.title.lower() in section.filter_headings()[0].title.lower()),
                                '')
         for section in [relevant_section, shortest_overall]:
             if not section:
@@ -1209,7 +1209,6 @@ def main(*args: str) -> None:
     if not 'decoder' in locals():
         decoder = Decoder()
     EPISODE_DECODER = decoder._json
-    EP_REGEX = Ep('1x01', episode_decoder=EPISODE_DECODER).ep_regex
     TRANSCRIPT_EXCLUSIONS = [k for k, v in decoder._json.items()
                              if v.get('noTranscript') is True]
     options['TRANSCRIPT_EXCLUSIONS'] = TRANSCRIPT_EXCLUSIONS
@@ -1225,7 +1224,7 @@ def main(*args: str) -> None:
             continue
         elif option in ['ep_id', 'ep']:
             value = get_validated_input(arg='ep', value=value, regex=EP_REGEX)
-            options['ep'] = Ep(value, episode_decoder=EPISODE_DECODER)
+            options['ep'] = Ep(value)
         elif option in ['yt_id', 'yt']:
             value = get_validated_input(arg=option, value=value, regex=YT_ID_REGEX)
             options['yt'] = YT(value)
@@ -1293,9 +1292,9 @@ def main(*args: str) -> None:
                 value = get_validated_input(arg='runtime', regex='\d{1,2}:\d{1,2}(:\d{1,2})?', input_msg="Please enter video runtime (HH:MM:SS or MM:SS)")
                 options['runtime'] = value
             elif req == 'ep':
-                test_ep = Ep('1x01', episode_decoder=EPISODE_DECODER)
+                test_ep = Ep('1x01')
                 value = get_validated_input(arg=req, value=value, regex=EP_REGEX)
-                options['ep'] = Ep(value, episode_decoder=EPISODE_DECODER)
+                options['ep'] = Ep(value)
 
     # default new page name is same as new episode name (and page being parsed)
     if not options.get('new_page_name'):
@@ -1423,7 +1422,7 @@ def main(*args: str) -> None:
 
         if options.get('transcript'):
             if options['ep'].prefix in TRANSCRIPT_EXCLUSIONS:
-                pywikibot.output(f'\nSkipping transcript page creation for {options["ep"].show} episode')
+                pywikibot.output(f'\nSkipping transcript page creation for {options["ep"].show.title} episode')
             else:
                 bot9 = TranscriptBot(generator=gen, **options)
                 bot9.treat_page()
@@ -1451,14 +1450,14 @@ def main(*args: str) -> None:
 
         if options.get('transcript_list'):
             if options['ep'].prefix in TRANSCRIPT_EXCLUSIONS:
-                pywikibot.output(f'\nSkipping transcript list update for {options["ep"].show} episode')
+                pywikibot.output(f'\nSkipping transcript list update for {options["ep"].show.title} episode')
             else:
                 bot12 = TranscriptListBot(generator=gen, **options)
                 bot12.treat_page()
 
         if options.get('long_short'):
             if options['ep'].prefix == '4SD':
-                pywikibot.output(f'\nSkipping longest/shortest for {options["ep"].show} episode')
+                pywikibot.output(f'\nSkipping longest/shortest for {options["ep"].show.title} episode')
             else:
                 bot13 = LongShortBot(generator=gen, **options)
                 bot13.treat_page()

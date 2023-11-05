@@ -116,7 +116,7 @@ def build_prefix_regex(episode_decoder=None):
     regex = '^(' + '|'.join(key_list) + ')'
     return regex
 
-# EP_REGEX = build_prefix_regex(episode_decoder=EPISODE_DECODER) + 'x\d+(a|b)?$'  # https://regex101.com/r/QXhVhb/4
+EP_REGEX = build_prefix_regex(episode_decoder=EPISODE_DECODER) + 'x\d+(a|b)?$'  # https://regex101.com/r/QXhVhb/4
 
 # TO DO: make Ep __init__ use '0x00' as default code for any invalid input (matching modules on wiki)
 
@@ -171,10 +171,6 @@ class Show:
 
     def __repr__(self):
         return f"Show({self.title}, '{self.prefix}')"
-
-    @property
-    def main_characters(self):
-        return MAIN_CHARACTER_DICT.get(self.title, [])
 
 
 class Campaign(Show):
@@ -244,7 +240,7 @@ class Ep:
                 episode_code,
                 flags=re.IGNORECASE)
         except AssertionError:
-            logger.info(f'"{episode_code}" not valid. Check Module:Ep/Decoder and data/decoder.json')
+            pywikibot.output(f'"{episode_code}" not valid. Check Module:Ep/Decoder and data/decoder.json')
 
         self.code = self.standardize_code(episode_code)
         self._code = episode_code
