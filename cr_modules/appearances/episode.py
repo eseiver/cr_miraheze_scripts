@@ -97,13 +97,15 @@ class pyEpisode(pyPage):
     def characters(self):
         return [x['name'] for x in self.character_dicts]
 
-#     @property
-#     def character_pages(self):
-#         if not hasattr(self, '_character_pages') or not self._character_pages:
-#             episode_characters = BulkWikiProcessor(self.characters)
-#             episode_characters.run()
-#             self._character_pages = episode_characters.pages
-#         return self._character_pages
+    @property
+    def character_pages(self):
+        if not hasattr(self, '_character_pages') or not self._character_pages:
+            character_manager = CharacterManager()  # Access the shared manager
+            self._character_pages = [
+                v for k, v in character_manager.character_cache.items()
+                if k in self.characters
+                ]
+        return self._character_pages
 
     def check_character_pages(self):
         character_manager = CharacterManager()  # Access the shared manager
