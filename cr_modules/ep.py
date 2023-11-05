@@ -120,6 +120,114 @@ def build_prefix_regex(episode_decoder=None):
 
 # TO DO: make Ep __init__ use '0x00' as default code for any invalid input (matching modules on wiki)
 
+
+class Show:
+    '''A Critical Role show or campaign, as represented in the Decoder.'''
+    def __init__(self, key, decoder=None):
+        if decoder is None:
+            decoder = EPISODE_DECODER
+        if key in decoder:
+            # convert from camelCase to snake_case
+            pattern = re.compile(r'(?<!^)(?=[A-Z])')
+            for attr, value in decoder[key].items():
+                name = pattern.sub('_', attr).lower()
+                setattr(self, name, value)
+            self.prefix = key
+        else:
+            raise ValueError(f"Key '{key}' not found in episode decoder")
+
+        if hasattr(self, 'seasons'):
+            '''Create season objects'''
+            season_dict = {}
+            for season_number, season_data in self.seasons.items():
+                season = Season(self.prefix, season_number, season_data)
+                season_dict[season_number] = season
+            self.seasons = season_dict
+
+        if hasattr(self, 'arcs'):
+            '''Create arc objects'''
+            arc_dict = {}
+            for arc in self.arcs:
+                arc_number = str(arc['arcNum'])
+                arc = Arc(self.prefix, arc_number, arc)
+                arc_dict[arc_number] = arc
+            self.arcs = arc_dict
+
+        # use default attributes if they are missing
+        if not hasattr(self, 'list_link'):
+            self.list_link = self.title
+
+        if not hasattr(self, 'thumbnail_category'):
+            self.thumbnail_category = 'Episode thumbnails'
+
+        if not hasattr(self, 'latest'):
+            self.latest = ''
+
+        if not hasattr(self, 'navbox'):
+            self.navbox = f"Nav-{self.prefix}"
+
+        if not hasattr(self, 'transcript_category'):
+            self.transcript_category = 'Transcripts'
+
+    def __repr__(self):
+        return f"Show({self.title}, '{self.prefix}')"
+
+    @property
+    def main_characters(self):
+        return MAIN_CHARACTER_DICT.get(self.title, [])
+
+
+class Campaign(Show):
+    '''A show is more specifically called a campaign for Campaigns 1-3.'''
+    def __repr__(self):
+        return f"Campaign({self.title})"
+
+
+class Season:
+    '''A season within a Critical Role show or campaign.'''
+    def __init__(self, show_prefix, season_number, show_data):
+        self.show_prefix = show_prefix
+        self.number = season_number
+        # to handle creation as standalone object or generated within a show
+        if season_number in show_data.get('seasons', {}):
+            show_data = show_data['seasons'][season_number]
+        elif show_data.get('arcs', {}):
+            show_data = show_data['arcs'][int(season_number)]
+        # convert from camelCase to snake_case
+        pattern = re.compile(r'(?<!^)(?=[A-Z])')
+        for attr, value in show_data.items():
+            name = pattern.sub('_', attr).lower()
+            setattr(self, name, value)
+        if not hasattr(self, 'name'):
+            self.name = f"Season {self.number}"
+
+    def __repr__(self, episode_decoder=EPISODE_DECODER):
+        campaign_title = episode_decoder.get(self.show_prefix, {}).get('title', '')
+        return f"Season({campaign_title}, {self.name})"
+
+
+class Arc(Season):
+    def __repr__(self):
+        return f"Arc({self.page})"
+
+    @property
+    def page(self, episode_decoder=EPISODE_DECODER):
+        campaign_title = episode_decoder.get(self.show_prefix, {}).get('title', '')
+        arc_title = (f'Arc {self.arc_num}: {self.title}'
+                       if hasattr(self, 'title') and self.title
+                       else f' Arc {self.arc_num}')
+        return f"{campaign_title} {arc_title}"
+
+    @property
+    def category(self):
+        return f'Category: {self.title} arc'
+
+    @property
+    def character_category(self):
+        arc_title = re.sub('^The ', '', self.title)
+        return f'Category:Characters in the {arc_title} arc'
+
+
 class Ep:
     '''for handling episode ids'''
     def __init__(self, episode_code, padding_limit=2, ep_regex=None):
@@ -166,13 +274,12 @@ class Ep:
         return standardized_code
 
     @property
-    def campaign_data(self, episode_decoder=None):
-        if not hasattr(self, '_campaign_data') or self._campaign_data is None:
-            if episode_decoder is None:
-                episode_decoder = EPISODE_DECODER
-            campaign_data = episode_decoder[self.prefix]
-            self._campaign_data = campaign_data
-        return self._campaign_data
+    def campaign(self):
+        return Campaign(self.prefix)
+
+    @property
+    def show(self):
+        return Show(self.prefix)
 
     @property
     def ends_in_letter(self):
@@ -204,67 +311,37 @@ class Ep:
         return number
 
     @property
-    def show(self):
-        return self.campaign_data['title']
-
-    @property
     def season(self):
-        season = ''
-        if self.campaign_data.get('seasons'):
-            season = re.search('\d+$', self.full_prefix)
-        return season
-
-    @property
-    def season_name(self):
-        season_name = ''
-        if self.season:
-            season_name = self.campaign_data['seasons'][self.season]['page']
-            if not season_name:
-                season_name = f"Season {self.season}"
-        return season_name
-
-    @property
-    def arc_data(self):
-        if not hasattr(self, '_arc_data') or self._arc_data is None:
-            arc = {}
-            if self.campaign_data.get('arcs'):
-                arcs = self.campaign_data['arcs']
-                for arc in arcs:
-                    if self.number > arc['endEpisode']:
-                        continue
-                    else:
-                        break
-            self._arc_data = arc
-        return self._arc_data
+        if not hasattr(self, '_season') or self._season is None:
+            season = ''
+            season_number = re.search('\d+$', self.full_prefix).group()
+            if not season_number:
+                season = ''
+            elif (hasattr(self, 'show') and
+                self.show and hasattr(self.show, 'seasons')
+                and self.show.seasons):
+                # make sure can still infer season even if not in Decoder
+                season = self.show.seasons.get(str(season_number),
+                                               Season(self.prefix,
+                                                      season_number,
+                                                      {}))
+            self._season = season
+        return self._season
 
     @property
     def arc(self):
-        if self.arc_data:
-            return self.arc_data.get('arcNum')
-        else:
-            return ''
-
-    @property
-    def list_page(self):
-        return self.campaign_data.get('listLink', self.show)
-
-    @property
-    def thumbnail_page(self):
-        return self.campaign_data.get('thumbnailCategory', 'Episode thumbnails')
-
-    @property
-    def latest(self):
-        '''The name in Module:Ep/Array that denotes the latest episode for this show'''
-        return self.campaign_data.get('latest')
-
-    @property
-    def navbox_name(self):
-        navbox = self.campaign_data.get('navbox', f"Nav-{self.prefix}")
-        return navbox
-
-    @property
-    def transcript_category(self):
-        return self.campaign_data.get('transcriptCategory', 'Transcripts')
+        arc = ''
+        if not hasattr(self, '_arc') or self._arc is None:
+            if (hasattr(self, 'campaign') and
+                self.campaign and hasattr(self.campaign, 'arcs')
+                and self.campaign.arcs):
+                arc = next((arc for arc
+                            in self.campaign.arcs.values()
+                            if self.number < arc.end_episode
+                            ),
+                           '')
+            self._arc = arc
+        return self._arc
 
     @property
     def image_filename(self):
@@ -328,31 +405,24 @@ class Ep:
         '''For building a short description to prepend to article.
         Italics do not display in this view.'''
         shortdesc = ''
-        if self.show in ['Bits and bobs', 'Midst']:
+        if self.show.title in ['Bits and bobs', 'Midst']:
             return shortdesc
 
         if self.ce_words:
             shortdesc += self.ce_words
         elif self.prefix == 'OS':
             shortdesc += 'One-shot episode'
-        elif self.show in ['Talks Machina', 'UnDeadwood']:
+        elif self.show.title in ['Talks Machina', 'UnDeadwood']:
             shortdesc += 'none'
         else:
-            shortdesc += self.show
+            shortdesc += self.show.title
 
-        if self.season_name:
-            shortdesc += f", {self.season_name}"
+        if self.season:
+            shortdesc += f", {self.season.name}"
 
         # Handle Exandria Unlimited separately
         if self.prefix == 'E':
-            if self.season == '1':
-                shortdesc = "Exandria Unlimited Prime"
-            elif self.season == '2':
-                shortdesc = "none"
-            elif self.season == '3':
-                shortdesc =  "Exandria Unlimited: Calamity"
-            else:
-                raise
+            shortdesc = self.season.page
 
         if self.prefix not in ['OS'] and not self.is_campaign and shortdesc != "none":
             shortdesc += f" Episode {self.number}"
@@ -381,9 +451,11 @@ class Ep:
         if len([x for x in str(self.number) if x.isdigit()]) >= self.padding_limit:
             code_list = [self.code]
         elif not self.ends_in_letter:
-            code_list = ['x'.join([self.full_prefix, str(self.number).zfill(1+n)]) for n in range(self.padding_limit)]
+            code_list = ['x'.join([self.full_prefix, str(self.number).zfill(1+n)])
+                         for n in range(self.padding_limit)]
         else:
-            code_list = ['x'.join([self.full_prefix, str(self.number).zfill(1+n)]) + self.code[-1] for n in range(self.padding_limit)]
+            code_list = ['x'.join([self.full_prefix, str(self.number).zfill(1+n)]) + self.code[-1]
+                         for n in range(self.padding_limit)]
         return code_list
 
     def get_previous_episode(self):
@@ -397,10 +469,10 @@ class Ep:
             letter = next(k for k, v in look_up.items() if v == suffix)
         if old_number > 0 and (not self.ends_in_letter or self.code.endswith('a')):
             old_id = 'x'.join([self.full_prefix, f"{old_number:02}"])
-            previous_episode = Ep(old_id, episode_decoder=self.episode_decoder)
+            previous_episode = Ep(old_id)
         elif old_number > 0:
             old_id = 'x'.join([self.full_prefix, f"{old_number:02}"]) + letter
-            previous_episode = Ep(old_id, episode_decoder=self.episode_decoder)
+            previous_episode = Ep(old_id)
         else:
             # no previous id, because the first of its kind
             previous_episode = None
@@ -410,18 +482,17 @@ class Ep:
         '''Cannot calculate across seasons (e.g., what was after 2x141). Handles letters (valid letters regex-limited).'''
         next_number = self.number + 1
         letter = ''
-        if self.ends_in_letter and not self.code.endswith('a'):
+        if self.ends_in_letter and not self.code.endswith(self.max_letter):
             next_number = self.number
             suffix = self.code[-1]
             look_up = dict(zip(ascii_lowercase, ascii_lowercase[1:]+'a'))
-            letter = next(k for k, v in look_up.items() if v == suffix)
-        if next_number > 0 and (not self.ends_in_letter or self.code.endswith('a')):
+            letter = next(v for k, v in look_up.items() if k == suffix)
+        if next_number > 0 and not self.ends_in_letter:
             next_id = 'x'.join([self.full_prefix, f"{next_number:02}"])
-            next_episode = Ep(next_id, episode_decoder=self.episode_decoder)
+            next_episode = Ep(next_id)
         elif next_number > 0:
             next_id = 'x'.join([self.full_prefix, f"{next_number:02}"]) + letter
-            next_episode = Ep(next_id, episode_decoder=self.episode_decoder)
+            next_episode = Ep(next_id)
         else:
-            # no previous id, because the first of its kind
             next_episode = None
         return next_episode
