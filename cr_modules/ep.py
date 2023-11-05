@@ -8,6 +8,8 @@ from string import ascii_lowercase
 
 import pywikibot
 
+from ..cr_modules.appearances.logger_config import logger
+
 MAIN_CHARACTER_DICT = {
     'Campaign 1': [
         'Grog Strongjaw',
@@ -310,6 +312,10 @@ class Show:
         else:
             return False
 
+    @property
+    def main_characters(self):
+        return MAIN_CHARACTER_DICT.get(self.title, [])
+
 
 class Campaign(Show):
     '''A show is more specifically called a campaign for Campaigns 1-3.'''
@@ -581,10 +587,6 @@ class Ep:
             return True
         else:
             return False
-
-    @property
-    def main_characters(self):
-        return MAIN_CHARACTER_DICT.get(self.show, [])
 
     @property
     def ce_codes(self):
