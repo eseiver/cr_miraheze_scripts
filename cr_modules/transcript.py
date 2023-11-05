@@ -481,7 +481,7 @@ class YoutubeTranscript:
         ts = self.process_errors(ts, language=language)
 
         # Step 7: add navigation and category
-        t_cat = f"Category:{self.ep.transcript_category}"
+        t_cat = f"Category:{self.ep.campaign.transcript_category}"
         if self.dupe_lines.get(language):
             # add duplicate category if duplicate lines found
             t_dupe_cat = f"Category:Transcripts with duplicate lines"
