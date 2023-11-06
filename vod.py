@@ -1306,12 +1306,19 @@ def main(*args: str) -> None:
         options['host'] = Actors(host, link=False, actor_data=ACTOR_DATA)
     if options['ep'].prefix == 'OS':
         host = next((options[x] for x in ['host', 'DM', 'GM', 'dm', 'gm']
-            if options.get(x)), 'Matthew Mercer')
+            if options.get(x)), '')
+        if not host:
+            host = pywikibot.input('Enter one-shot host (leave blank for Matt Mercer)')
+            if not host.strip():
+                host = 'Matthew Mercer'
         options['host'] = Actors(host, link=False, actor_data=ACTOR_DATA)
 
     # if one-shot, default game system is D&D.
     if options['ep'].prefix == 'OS' and not options.get('game_system'):
-        options['game_system'] = 'Dungeons & Dragons'
+        game_system = pywikibot.input('Enter one-shot game system (leave blank for D&D)')
+        if not game_system.strip():
+            game_system = 'Dungeons & Dragons'
+        options['game_system'] = game_system
 
     # The preloading option is responsible for downloading multiple
     # pages from the wiki simultaneously.
