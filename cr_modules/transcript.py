@@ -275,8 +275,8 @@ class YoutubeTranscript:
 
         found_music = False
 
-        # don't worry about deleting the intro song if not English
-        if language != DEFAULT_LANGUAGE:
+        # don't worry about deleting the intro song if not English or main campaign
+        if language != DEFAULT_LANGUAGE or not self.ep.is_campaign:
             intro_done = True
 
         if language == 'ru':
@@ -392,7 +392,7 @@ class YoutubeTranscript:
         # combine across all lines into single txt file
         transcript = self.combine_preprocessed_captions(preprocessed_captions=preprocessed_captions,
                                                 language=language)
-        if language == DEFAULT_LANGUAGE:
+        if language == DEFAULT_LANGUAGE and self.ep.is_campaign:
             transcript = '== Pre-show ==\n' + transcript
 
         return transcript
@@ -465,7 +465,7 @@ class YoutubeTranscript:
         ts = wikify_html_string(ts)
 
         # Step 4: Comment out the break
-        if not self.ignore_break and language==DEFAULT_LANGUAGE:
+        if not self.ignore_break and language==DEFAULT_LANGUAGE and self.ep.is_campaign:
             ts = Breakfinder(transcript=ts, ep=self.ep).revised_transcript
 
         # Step 5: Add cleanup tag if no speaker tags found
