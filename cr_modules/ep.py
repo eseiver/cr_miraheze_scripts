@@ -240,7 +240,17 @@ class Ep:
                 episode_code,
                 flags=re.IGNORECASE)
         except AssertionError:
-            pywikibot.output(f'"{episode_code}" not valid. Check Module:Ep/Decoder and data/decoder.json')
+            if re.match('\w+x\w+', episode_code):
+                prefix = episode_code.split('x')[0]
+                output = '\n'.join([
+                    f'<<yellow>>"{episode_code}"<<default>> not valid episode code.',
+                    f'Check Module:Ep/Decoder on wiki. Is there an entry for <<yellow>>{prefix}<<default>>?',
+                    f'Make sure data/decoder.json is up to date by running <<yellow>>python pwb.py download_data<<default>>'
+                ])
+            else:
+                output = f'<<yellow>>{episode_code}<<default>> is not in format CxNN'
+                episode_code = '0x00'
+            pywikibot.output(output)
 
         self.code = self.standardize_code(episode_code)
         self._code = episode_code
