@@ -78,8 +78,7 @@ class pyEpisode(pyPage):
     @property
     def character_dicts(self):
         if not hasattr(self, '_character_dicts') or not self._character_dicts:
-            fcp = FeaturedCharactersParser(fc_section=self.featured_characters_section,
-                               pagename=self.title())
+            fcp = FeaturedCharactersParser(page=self)
             fcp.parse()
             character_dicts = []
             for ad in fcp.appearance_dict:
@@ -136,23 +135,21 @@ class pyEpisode(pyPage):
 @dataclass
 class FeaturedCharactersParser:
     '''for a single WikiWork object, parse the featured characters section'''
-    fc_section: mwparserfromhell.wikicode
-    pagename: str
-    section_name: str = CHARACTERS_SECTION_NAME
+    page: pyEpisode
     # character_list: list = field(default_factory=list)
     linked_only: bool = True  # whether only wikilinked character names will be included in ceas
     # match_name: bool = True  # whether to match the character name with character pages
     check_redirects: bool = True  # whether to see if unmatched names redirect to matched ones
     work_type: str = 'episode'  # whether an episode, issue of a comic, etc
     include_raw_description: bool = True  # whether to include raw description in appearance object
-    # fc_section: str = field(init=False)
+    fc_section: str = field(init=False)
     divided_fc: dict = field(default_factory=dict)
     cleaned_characters: dict = field(default_factory=dict)
     appearance_dict: dict = field(default_factory=dict)
 
     def parse(self):
-        fc_section = str(self.fc_section)
-        if fc_section:
+        self.fc_section = self.page.featured_characters_section
+        if self.fc_section:
             self.divided_fc = self.divide_characters()
             self.cleaned_characters = self.clean_divided_characters(self.divided_fc)
             self.appearance_dict = self.build_appearance_dict(self.cleaned_characters)
@@ -186,7 +183,7 @@ class FeaturedCharactersParser:
                 self.work_type == 'episode') or
                 k == 'Featured characters'
                 ):
-                logger.debug(f"Ignored heading: {k} ({self.pagename})")
+                logger.debug(f"Ignored heading: {k} ({self.page.title()})")
                 continue
             # else:
             #     new_heading = heading_replacement_dict[k.strip()]
