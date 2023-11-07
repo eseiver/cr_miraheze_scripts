@@ -74,6 +74,20 @@ class pyCharacter(pyPage):
 
         return appearance_dicts
 
+    def get_other_appearances(self):
+        unmatched = []
+        for temp in self.appearances_section.filter_templates():
+            if temp.name.matches('appearance'):
+                val = temp.params[0].value
+                if val.filter_wikilinks():
+                    work = val.filter_wikilinks()[0].title.strip()
+                else:
+                    work = str(val).lstrip("'").rstrip("'")
+                if (not re.match(EP_REGEX, work) and
+                    not self._conversion_dict.get(work.lower(),{}).get('episode_code', '')):
+                    unmatched.append(work)
+        return unmatched
+
     def process_infobox_appearances(self):
         infobox_apps = {}
         for param in self.infobox_appearances_raw:
@@ -87,7 +101,7 @@ class pyCharacter(pyPage):
         else self._conversion_dict.get(x['work'].lower(), '').get('episode_code', '')
         if self._conversion_dict.get(x['work'].lower()) else ''
         for x in self.appearances]
-        eps = [Ep(ep).code for ep in eps if ep]
+        eps = [Ep(ep) for ep in eps if ep]
         return eps
 
 
