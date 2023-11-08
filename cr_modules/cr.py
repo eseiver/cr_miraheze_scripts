@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 
 import pywikibot
 
-from .ep import Ep, LuaReader
+from .ep import Ep, LuaReader, DATA_PATH
 
 # regular expressions for string matching
 ARRAY_ENTRY_REGEX = '''\[\"(?P<epcode>.*?)\"\] = \{\s*\[\"title\"\] = \"(?P<title>.*)\",?((\s*\[\"pagename\"\] = \"(?P<pagename>.*)\",)?(\s*\[\"altTitles\"\] = \{(?P<altTitles>.*)\})?)?'''
@@ -25,6 +25,12 @@ AIRDATE_ORDER = 'Module:AirdateOrder/Array'
 YT_SWITCHER = 'Module:Ep/YTURLSwitcher/URLs'
 PODCAST_SWITCHER = 'Module:Ep/PodcastSwitcher/URLs'
 TRANSCRIPTS_LIST = 'Transcripts'
+
+# offline access
+DUMP_FILE = 'criticalrolewiki_xml_a7650150ba69dbad0a0c.xml.gz'
+DUMP_STRING = '09:26, October 21, 2023'
+DUMP_PATH = os.path.join(DATA_PATH, DUMP_FILE)
+DUMP_DATE = datetime.strptime(DUMP_STRING, '%H:%M, %B %d, %Y')
 
 # date and time
 TIMEZONE = ZoneInfo("America/Los_Angeles")  # where Critical Role is based
