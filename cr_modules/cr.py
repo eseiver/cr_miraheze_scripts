@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 
 import mwparserfromhell
 import pywikibot
+from pywikibot.xmlreader import XmlDump, XmlEntry
 
 from .ep import Ep, LuaReader, DATA_PATH
 
@@ -505,11 +506,15 @@ def get_validated_input(regex, arg, value='', attempts=3, req=True,
 
 
 class pyPage(pywikibot.Page):
-    '''Extends Page class to have more wikicode features.'''
+    def __init__(self, site, title, content):
+        super(pyPage, self).__init__(site, title)
+        self.wiki_title = title
+        self.content = content
+
     @property
     def wikicode(self):
         if not hasattr(self, '_wikicode') or self._wikicode is None:
-            self._wikicode = mwparserfromhell.parse(self.text)
+            self._wikicode = mwparserfromhell.parse(self.content)
         return self._wikicode
 
     @property
@@ -567,3 +572,36 @@ class pyPage(pywikibot.Page):
             if section.filter_headings()[0].title.matches(heading):
                 return section
         return ''
+
+    @classmethod
+    def create_from_pywikibot_page(cls, page):
+        site = page.site
+        title = page.title()
+        content = page.text
+        return cls(site, title, content)
+
+    @classmethod
+    def create_from_xml_dump(cls, title, site=None, dump_path=None):
+        if site is None:
+            site = pywikibot.Site()
+        if dump_path is None:
+            dump_path = DUMP_PATH
+        # Create an XmlDump object and find an XmlEntry for the given title
+        dump = XmlDump(dump_path, revisions='latest')
+        xml_entry = next((x for x in dump.parse() if x.title == title), {})
+
+        # Create a pyPage object from the XmlEntry
+        return cls(site, xml_entry.title, xml_entry.text)
+
+    @classmethod
+    def create_multiple_from_xml_dump(cls, titles, site=None, dump_path=None):
+        if site is None:
+            site = pywikibot.Site()
+        if dump_path is None:
+            dump_path = DUMP_PATH
+        dump = XmlDump(dump_path, revisions='latest')
+        xml_entries = [x for x in dump.parse() if x.title in titles]
+
+        py_pages = [cls(site, xml_entry.title, xml_entry.text) for xml_entry in xml_entries]
+
+        return py_pages
