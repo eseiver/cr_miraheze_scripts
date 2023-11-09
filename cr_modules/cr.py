@@ -506,15 +506,11 @@ def get_validated_input(regex, arg, value='', attempts=3, req=True,
 
 
 class pyPage(pywikibot.Page):
-    def __init__(self, site, title, content):
-        super(pyPage, self).__init__(site, title)
-        self.wiki_title = title
-        self.content = content
 
     @property
     def wikicode(self):
         if not hasattr(self, '_wikicode') or self._wikicode is None:
-            self._wikicode = mwparserfromhell.parse(self.content)
+            self._wikicode = mwparserfromhell.parse(self.text)
         return self._wikicode
 
     @property
@@ -574,13 +570,6 @@ class pyPage(pywikibot.Page):
         return ''
 
     @classmethod
-    def create_from_pywikibot_page(cls, page):
-        site = page.site
-        title = page.title()
-        content = page.text
-        return cls(site, title, content)
-
-    @classmethod
     def create_from_xml_dump(cls, title, site=None, dump_path=None):
         if site is None:
             site = pywikibot.Site()
@@ -590,8 +579,9 @@ class pyPage(pywikibot.Page):
         dump = XmlDump(dump_path, revisions='latest')
         xml_entry = next((x for x in dump.parse() if x.title == title), {})
 
-        # Create a pyPage object from the XmlEntry
-        return cls(site, xml_entry.title, xml_entry.text)
+        py_page = cls(site, title)
+        py_page._wikicode = mwparserfromhell.parse(xml_entry.text)
+        return py_page
 
     @classmethod
     def create_multiple_from_xml_dump(cls, titles, site=None, dump_path=None):
@@ -602,6 +592,11 @@ class pyPage(pywikibot.Page):
         dump = XmlDump(dump_path, revisions='latest')
         xml_entries = [x for x in dump.parse() if x.title in titles]
 
-        py_pages = [cls(site, xml_entry.title, xml_entry.text) for xml_entry in xml_entries]
+        py_pages = []
+        for xml_entry in xml_entries:
+            py_page = cls(site, xml_entry.title)
+            py_page._wikicode = mwparserfromhell.parse(xml_entry.text)
+            # yield py_page
+            py_pages.append(py_page)
 
         return py_pages
