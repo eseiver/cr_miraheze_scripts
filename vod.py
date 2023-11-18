@@ -322,32 +322,32 @@ class EpisodeBot(
         infobox = self.get_infobox(wikicode=wikicode)
 
         infobox['VOD'] = ep.wiki_vod
-        infobox['Podcast'] = ep.wiki_podcast
-        infobox['EpCode'] = ep.code
+        infobox['podcast'] = ep.wiki_podcast
+        infobox['epCode'] = ep.code
 
-        if self.opt.runtime and not does_value_exist(infobox, param_name='Runtime'):
-            infobox['Runtime'] = ' ' + self.opt.runtime.lstrip()
+        if self.opt.runtime and not does_value_exist(infobox, param_name='runtime'):
+            infobox['runtime'] = ' ' + self.opt.runtime.lstrip()
         # get the airdate & airtime so it can be used later, or prompt if infobox conflicts w/user entry
-        if infobox.has_param('Airdate') and self.opt.airdate:
-            if Airdate(infobox['Airdate'].value.strip()).date == self.opt.airdate.date:
+        if infobox.has_param('airdate') and self.opt.airdate:
+            if Airdate(infobox['airdate'].value.strip()).date == self.opt.airdate.date:
                 pass
             else:
-                airdate_1 = Airdate(infobox['Airdate'].value.strip()).date
+                airdate_1 = Airdate(infobox['airdate'].value.strip()).date
                 airdate_2 = self.opt.airdate.date
                 if len(airdate_1) and airdate_1 != airdate_2:
                     new_airdate_string = get_validated_input(arg='airdate', regex=DATE_REGEX, input_msg=f'Infobox airdate {airdate_1} does not match entered airdate {airdate_2}. Enter airdate (YYYY-MM-DD):')
                     new_airdate = Airdate(new_airdate_string)
                     self.opt.airdate.datetime = self.opt.airdate.datetime.replace(**{x: getattr(new_airdate.datetime, x) for x in ['day', 'month', 'year']})
-                    infobox['Airdate'] = new_airdate.date
+                    infobox['airdate'] = new_airdate.date
                 else:
-                    infobox['Airdate'] = self.opt.airdate
-        elif infobox.has_param('Airdate') and infobox['Airdate'].value.strip() and not self.opt.airdate:
-            self.opt.airdate = Airdate(infobox['Airdate'].value.strip())
+                    infobox['airdate'] = self.opt.airdate
+        elif infobox.has_param('airdate') and infobox['airdate'].value.strip() and not self.opt.airdate:
+            self.opt.airdate = Airdate(infobox['airdate'].value.strip())
         else:
             self.opt.airdate = ""
-        if infobox.has_param('Airtime') and infobox['Airdate'].value.strip() and not self.opt.airtime:
+        if infobox.has_param('airtime') and infobox['airdate'].value.strip() and not self.opt.airtime:
             # add airtime to airdate object
-            self.opt.airtime = Airdate(infobox['Airtime'].value.strip())
+            self.opt.airtime = Airdate(infobox['airtime'].value.strip())
             if self.opt.airtime:
                 self.opt.airdate = Airdate(datetime.combine(
                     self.opt.airdate.datetime.date(),
@@ -358,8 +358,8 @@ class EpisodeBot(
         # if image field is filled in with existing file, cancel thumbnail procedure
         # otherwise, use image_name if entered
         file = None
-        if does_value_exist(infobox, param_name='Image') and self.opt.upload:
-            image_value = (remove_comments(infobox['Image'].value)).strip()
+        if does_value_exist(infobox, param_name='image') and self.opt.upload:
+            image_value = (remove_comments(infobox['image'].value)).strip()
             if image_value and 'file' not in image_value.lower():
                 file_value = 'File:' + image_value
             else:
@@ -381,16 +381,16 @@ class EpisodeBot(
         if not self.opt.upload and (not file or not file.exists()):
             pass
         elif (self.opt.image_name and
-            not does_value_exist(infobox, param_name='Image')):
-            infobox['Image'] = ' ' + self.opt.image_name.lstrip()
+            not does_value_exist(infobox, param_name='image')):
+            infobox['image'] = ' ' + self.opt.image_name.lstrip()
         else:
-            infobox['Image'] = ' ' + ep.image_filename
+            infobox['image'] = ' ' + ep.image_filename
 
         # only write caption if field not filled in or missing AND image field filled in
-        if ((not infobox.has_param('Caption')
-            or not does_value_exist(infobox, param_name='Caption'))
-            and does_value_exist(infobox, param_name='Image')):
-            infobox['Caption'] = make_image_caption(actors=self.opt.actors, ep=ep)
+        if ((not infobox.has_param('caption')
+            or not does_value_exist(infobox, param_name='caption'))
+            and does_value_exist(infobox, param_name='image')):
+            infobox['caption'] = make_image_caption(actors=self.opt.actors, ep=ep)
 
         if not any([x.name.matches(ep.campaign.navbox) for x in wikicode.filter_templates()]):
             wikicode.append('\n' + f"{{{{{ep.campaign.navbox}}}}}")
@@ -1085,7 +1085,7 @@ class Connect4SDBot(AirdateBot, EpArrayBot):
         infobox = self.get_infobox(wikicode=wikicode)
         if not infobox.has_param('4SD') or not does_value_exist(infobox, param_name='4SD'):
             infobox.add('4SD', ep.wiki_noshow, showkey=None,
-                         before='Podcast', preserve_spacing=True)
+                         before='podcast', preserve_spacing=True)
         self.put_current(str(wikicode), summary="Adding 4SD to infobox (via pywikibot)")
 
     def treat_page(self):
