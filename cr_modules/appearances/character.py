@@ -5,7 +5,7 @@ from ..cr import pyPage
 from ..ep import Ep, EP_REGEX, EpisodeReader
 from .logger_config import logger
 
-INFOBOX_APP_PARAM_NAMES = ['First', 'Last', 'Stream', 'Television', 'Comic', 'Other']
+INFOBOX_APP_PARAM_NAMES = ['first', 'last', 'stream', 'television', 'comic', 'other']
 
 
 class pyCharacter(pyPage):
