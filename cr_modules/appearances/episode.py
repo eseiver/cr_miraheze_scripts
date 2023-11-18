@@ -48,7 +48,10 @@ class pyEpisode(pyPage):
     def episode_code(self):
         if not hasattr(self, '_episode_code') or self._episode_code is None:
             if self.infobox and self.infobox.name.matches('Infobox Episode'):
-                self._episode_code = Ep(self.infobox['EpCode'].value)
+                if self.infobox.has_param('EpCode'):
+                    self._episode_code = Ep(self.infobox['EpCode'].value.strip())
+                else:
+                    self._episode_code = Ep(self.infobox['epCode'].value.strip())
             else:
                 self._episode_code = ''
         return self._episode_code
