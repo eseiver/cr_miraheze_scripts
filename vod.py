@@ -590,7 +590,7 @@ class EpArrayBot(EpisodeBot):
         # Make sure that for relevant episode codes it is also the latest
         latest = ep.campaign.latest
         if latest and latest not in new_dict['altTitles']:
-            text = re.sub(fr'{latest}(, )?', '', text)
+            text = re.sub(fr'"{latest}"(, )?', '', text)
             new_dict['altTitles'].append(latest)
 
         new_entry = self.dict_to_entry(new_dict)

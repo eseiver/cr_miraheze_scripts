@@ -129,13 +129,14 @@ class Actors:
                                                 choices)
                 match = next(x for x in candidates if x.lower() == choice.lower())
             elif self.matched_only:
-                choice = pywikibot.input_yn(f"No match for '{actor}'. Check spelling or re-run using <<yellow>>-download_data<<default>> flag."
-                                   " Enter name manually?")
-                if choice:
-                    match = pywikibot.input("Full name")
-                    pywikibot.output(f"Done. Please add {match} to <<yellow>>Module:ActorData<<default>>.")
+                pywikibot.output(f"No match for '{actor}'. Check spelling or re-run script using <<yellow>>-download_data<<default>> flag.")
+                name_entered = pywikibot.input_yn(f"Is {actor} their full name?")
+                if not name_entered:
+                    match = pywikibot.input("Enter full name:")
                 else:
-                    continue
+                    match = actor
+                if match not in self.actor_data.actor_names:
+                    pywikibot.output(f"Done. Please add {match} to <<yellow>>Module:ActorData<<default>>.")
             else:
                 match = actor
             matched_list.append(match)
