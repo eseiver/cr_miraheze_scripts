@@ -579,9 +579,6 @@ class EpArrayBot(EpisodeBot):
             array_dicts = self.get_array_dicts()
             current_dict = self.get_current_dict(array_dicts=array_dicts)
         else:
-            prev_entry = next((x for x in re.split('\n\s+\},\n',
-                            text) if re.search(f'\["{ep.get_previous_episode().code}"\]', x)),
-                            '') + '\n    },\n'
             current_dict = {}
 
         new_dict = self.build_new_array_dict()
@@ -598,6 +595,9 @@ class EpArrayBot(EpisodeBot):
         if current_entry:
             text = text.replace(current_entry, new_entry)
         else:
+            prev_entry = next((x for x in re.split('\n\s+\},\n',
+                                                   text) if re.search(f'\["{ep.get_previous_episode().code}"\]', x)),
+                              '') + '\n    },\n'
             text = text.replace(prev_entry, '\n'.join([prev_entry, new_entry]))
 
         self.put_current(text, summary=f"Updating {ep.code} entry (via pywikibot)")
