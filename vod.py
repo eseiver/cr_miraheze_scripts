@@ -646,10 +646,8 @@ class EpListBot(EpisodeBot):
         else:
             host = ''
         if self.opt.ep.prefix == '4SD':
-            color = '6f4889'
             wiki_code = ep.wiki_noshow
         else:
-            color = ''
             wiki_code = ep.wiki_code
         if self.opt.ep.prefix == 'OS':
             game_system = self.opt.game_system
@@ -664,7 +662,6 @@ class EpListBot(EpisodeBot):
             'aux1': host,
             'aux2': game_system,
             'summary': self.opt.episode_summary,
-            'color': color,
         }
         return entry_dict
 
