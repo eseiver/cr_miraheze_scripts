@@ -8,7 +8,7 @@ from string import ascii_lowercase
 
 import pywikibot
 
-from cr_modules.appearances.logger_config import logger
+# from cr_modules.appearances.logger_config import logger
 
 MAIN_CHARACTER_DICT = {
     'Campaign 1': [
