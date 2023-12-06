@@ -570,6 +570,14 @@ class pyPage(pywikibot.Page):
         return ''
 
     @classmethod
+    def create_from_xml_entry(cls, xml_entry, site=None):
+        if site is None:
+            site = pywikibot.Site()
+        py_page = cls(site, xml_entry.title)
+        py_page._wikicode = mwparserfromhell.parse(xml_entry.text)
+        return py_page
+
+    @classmethod
     def create_from_xml_dump(cls, title, site=None, dump_path=None):
         if site is None:
             site = pywikibot.Site()
@@ -579,8 +587,7 @@ class pyPage(pywikibot.Page):
         dump = XmlDump(dump_path, revisions='latest')
         xml_entry = next((x for x in dump.parse() if x.title == title), {})
 
-        py_page = cls(site, title)
-        py_page._wikicode = mwparserfromhell.parse(xml_entry.text)
+        py_page = cls.create_from_xml_entry(site, xml_entry)
         return py_page
 
     @classmethod
