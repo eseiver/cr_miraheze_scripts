@@ -62,7 +62,8 @@ No changes will be made automatically. Actions are skipped if change is not need
 the episode already exists on the module page).
 
 All other parameters are passed in the format -parameter:value. Use "quotes" around value if it has
-spaces (e.g., -actors:"Marisha, Taliesin, Matt"). "!" needs to be escaped, even in quotes, as "\!".
+spaces (e.g., -actors:"Marisha, Taliesin, Matt"). "!" needs to be escaped, even in quotes, as "\\!"
+(one backslash only).
 You will be prompted to enter a missing value if needed. No quotation marks needed in this case.
 
 -ep:              REQUIRED. The CxNN code of the episode with newly uploaded VOD (-ep_id also valid)
@@ -479,7 +480,7 @@ class EpArrayBot(EpisodeBot):
             if not y['pagename']:
                 y['pagename'] = ''
             if y['altTitles']:
-                y['altTitles'] = re.findall('"(.*?)"', y['altTitles'])
+                y['altTitles'] = re.findall(r'"(.*?)"', y['altTitles'])
             else:
                 y['altTitles'] = []
             array_dicts.append(y)
@@ -571,8 +572,8 @@ class EpArrayBot(EpisodeBot):
         # Replace tabs with 4 spaces
         text = text.replace('\t', '    ')
 
-        current_entry = next((x for x in re.split('\n\s+\},\n',
-                            text) if re.search(f'\["{ep.code}"\]', x)),
+        current_entry = next((x for x in re.split(r'\n\s+\},\n',
+                            text) if re.search(fr'\["{ep.code}"\]', x)),
                             '')
         if current_entry:
             current_entry += '\n    },\n'
@@ -595,8 +596,8 @@ class EpArrayBot(EpisodeBot):
         if current_entry:
             text = text.replace(current_entry, new_entry)
         else:
-            prev_entry = next((x for x in re.split('\n\s+\},\n',
-                                                   text) if re.search(f'\["{ep.get_previous_episode().code}"\]', x)),
+            prev_entry = next((x for x in re.split(r'\n\s+\},\n',
+                                                   text) if re.search(fr'\["{ep.get_previous_episode().code}"\]', x)),
                               '') + '\n    },\n'
             text = text.replace(prev_entry, '\n'.join([prev_entry, new_entry]))
 
@@ -974,7 +975,7 @@ class AirdateBot(EpisodeBot):
         return airdate_entry
 
     def parse_airdate_page(self):
-        airdate_module_regex = '\{epCode = "(?P<ep_code>.*?)", date = "(?P<airdate_entry>.*)"\}'
+        airdate_module_regex = fr'\\{{epCode = "(?P<ep_code>.*?)", date = "(?P<airdate_entry>.*)"\\}}'
         self.current_page = pywikibot.Page(self.site, AIRDATE_ORDER)
         text = self.current_page.text
 
@@ -1286,7 +1287,7 @@ def main(*args: str) -> None:
                 value = pywikibot.input(f"Optional: L-R actor order in {options['ep']} thumbnail (first names ok)")
                 options[req] = Actors(value, actor_data=ACTOR_DATA)
             elif req == 'runtime' and any([options.get(x) for x in ['update_page', 'ep_list', 'long_short']]):
-                value = get_validated_input(arg='runtime', regex='\d{1,2}:\d{1,2}(:\d{1,2})?', input_msg="Please enter video runtime (HH:MM:SS or MM:SS)")
+                value = get_validated_input(arg='runtime', regex=r'\d{1,2}:\d{1,2}(:\d{1,2})?', input_msg="Please enter video runtime (HH:MM:SS or MM:SS)")
                 options['runtime'] = value
             elif req == 'ep':
                 test_ep = Ep('1x01')

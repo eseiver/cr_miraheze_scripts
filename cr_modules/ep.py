@@ -113,10 +113,10 @@ def build_prefix_regex(episode_decoder=None):
     if episode_decoder is None:
         episode_decoder = EPISODE_DECODER
     key_list = build_prefix_options(episode_decoder=episode_decoder)
-    regex = '^(' + '|'.join(key_list) + ')'
+    regex = r'^(' + r'|'.join(key_list) + r')'
     return regex
 
-EP_REGEX = build_prefix_regex(episode_decoder=EPISODE_DECODER) + 'x\d+(a|b)?$'  # https://regex101.com/r/QXhVhb/4
+EP_REGEX = build_prefix_regex(episode_decoder=EPISODE_DECODER) + r'x\d+(a|b)?$'  # https://regex101.com/r/QXhVhb/4
 
 # TO DO: make Ep __init__ use '0x00' as default code for any invalid input (matching modules on wiki)
 
@@ -220,7 +220,7 @@ class Arc(Season):
 
     @property
     def character_category(self):
-        arc_title = re.sub('^The ', '', self.title)
+        arc_title = re.sub(r'^The ', '', self.title)
         return f'Category:Characters in the {arc_title} arc'
 
 
@@ -240,7 +240,7 @@ class Ep:
                 episode_code,
                 flags=re.IGNORECASE)
         except AssertionError:
-            if re.match('\w+x\w+', episode_code):
+            if re.match(r'\w+x\w+', episode_code):
                 prefix = episode_code.split('x')[0]
                 output = '\n'.join([
                     f'<<yellow>>"{episode_code}"<<default>> not valid episode code.',
@@ -320,7 +320,7 @@ class Ep:
     def season(self):
         if not hasattr(self, '_season') or self._season is None:
             season = ''
-            season_number = re.search('\d+$', self.full_prefix).group()
+            season_number = re.search(r'\d+$', self.full_prefix).group()
             if not season_number:
                 season = ''
             elif (hasattr(self, 'show') and

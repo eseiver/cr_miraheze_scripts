@@ -234,7 +234,7 @@ class YoutubeTranscript:
         caption_lines = []
         for i, line in enumerate(captions):
             lines = [x.strip() for x in line['text'].split('\n')]
-            if not re.match('^([A-Z]{2}|\()', lines[-1]):
+            if not re.match(r'^([A-Z]{2}|\()', lines[-1]):
                 lines = [line['text'].replace('\n', ' ')]
             for l in lines:
                 line_and_starttime = (l, int(line['start']))
@@ -252,9 +252,9 @@ class YoutubeTranscript:
                 continue
             if '♪' in line:
                 pass
-            elif line == caption_lines[i-1][0] and not re.match('^\(', line):
+            elif line == caption_lines[i-1][0] and not re.match(r'^\(', line):
                 dupe = True
-            elif not re.match('^\(', line):
+            elif not re.match(r'^\(', line):
                 text1 = [x for x in line if x.isalpha()]
                 text2 = [x for x in caption_lines[i-1][0] if x.isalpha()]
                 if text1 == text2 and len(text1) > 10:
@@ -284,10 +284,10 @@ class YoutubeTranscript:
             all_uppers = '[{}]'.format("".join(
                 [chr(i) for i in range(sys.maxunicode) if chr(i).isupper()]
                 ))
-            speaker_regex = f'^{all_uppers}.*?{all_uppers}\s*:'
+            speaker_regex = fr'^{all_uppers}.*?{all_uppers}\s*:'
         else:
             speaker_tags = self.actor_data.speaker_tags
-            speaker_regex = '^[A-Z].*?[A-Z]\s*:'
+            speaker_regex = r'^[A-Z].*?[A-Z]\s*:'
 
         for i, line in enumerate(preprocessed_captions):
             next_line = (preprocessed_captions[i+1]
@@ -299,10 +299,10 @@ class YoutubeTranscript:
 
             if (not during_intro and
                 not intro_done and
-                (re.search("♪ It's Thursday night ♪", line) or
+                (re.search(r"♪ It's Thursday night ♪", line) or
                 "♪ critical" in line.strip().lower())):
                 if during_intro:
-                    print(f'error finding intro for {self.ep}')
+                    print(fr'error finding intro for {self.ep}')
                 during_intro = True
                 continue
             elif during_intro and (welcome_back(line, language=language) or
@@ -326,7 +326,7 @@ class YoutubeTranscript:
                 line = line[1:]
 
             # handle quotation marks, excluding comments
-            quote_count = re.sub('<\!--.*?-->', '', line).count('"')
+            quote_count = re.sub(r'<\!--.*?-->', '', line).count('"')
             if not active_quote and quote_count % 2 != 0:
                 active_quote = True
 
@@ -342,27 +342,27 @@ class YoutubeTranscript:
                 current_speaker = re.search(speaker_regex, line)
 
             # these are non-dialogue descriptions that get their own lines (if not in middle of quote)
-            elif re.match('^\(.*?\)$', line.strip()) and not active_quote:
+            elif re.match(r'^\(.*?\)$', line.strip()) and not active_quote:
                 if i+1 >= len(preprocessed_captions):
                     fixed_lines.append(line)
                     continue
                 prev_line = preprocessed_captions[i-1] if i != 0 else ''
                 next_line = preprocessed_captions[i+1] if len(preprocessed_captions) > i else ''
-                if bool(re.search(speaker_regex, next_line) and not re.search(':$', prev_line)):
+                if bool(re.search(speaker_regex, next_line) and not re.search(r':$', prev_line)):
                     fixed_lines.append(line_in_progress)
                     line_in_progress = ''
                     fixed_lines.append(line)
                 else:
 
                     line_in_progress = ' '.join([line_in_progress.strip(), line.strip()]).strip()
-                    quote_count = re.sub('<\!--.*?-->', '', line_in_progress).count('"')
+                    quote_count = re.sub(r'<\!--.*?-->', '', line_in_progress).count('"')
                     if quote_count % 2 == 0:
                         active_quote = False
 
             # continuation of previous line; if quotation marks are even, active quote is done
             elif line_in_progress:
                 line_in_progress = ' '.join([line_in_progress.strip(), line.strip()]).strip()
-                quote_count = re.sub('<\!--.*?-->', '', line_in_progress).count('"')
+                quote_count = re.sub(r'<\!--.*?-->', '', line_in_progress).count('"')
                 if quote_count % 2 == 0:
                     active_quote = False
 

@@ -13,10 +13,10 @@ import pywikibot
 from .ep import Ep, LuaReader, DATA_PATH
 
 # regular expressions for string matching
-ARRAY_ENTRY_REGEX = '''\[\"(?P<epcode>.*?)\"\] = \{\s*\[\"title\"\] = \"(?P<title>.*)\",?((\s*\[\"pagename\"\] = \"(?P<pagename>.*)\",)?(\s*\[\"altTitles\"\] = \{(?P<altTitles>.*)\})?)?'''
-YT_LINK_REGEX = '(?P<vod>(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))(?P<yt_id>[-\w_]{11})(&t=(?P<timecode>.*))?)'
-YT_ID_REGEX = '[-\w_]{11}'
-LONG_SHORT_REGEX = "\|\s*(?P<num>\d+)\s*\|\|.*?\{\{ep\|(?P<ep_code>.*?)(\|.*?)?\}\}.*?\|\| (?P<timecode>(\d+:\d+){2,3})"
+ARRAY_ENTRY_REGEX = r'''\[\"(?P<epcode>.*?)\"\] = \{\s*\[\"title\"\] = \"(?P<title>.*)\",?((\s*\[\"pagename\"\] = \"(?P<pagename>.*)\",)?(\s*\[\"altTitles\"\] = \{(?P<altTitles>.*)\})?)?'''
+YT_LINK_REGEX = r'(?P<vod>(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))(?P<yt_id>[-\w_]{11})(&t=(?P<timecode>.*))?)'
+YT_ID_REGEX = r'[-\w_]{11}'
+LONG_SHORT_REGEX = r"\|\s*(?P<num>\d+)\s*\|\|.*?\{\{ep\|(?P<ep_code>.*?)(\|.*?)?\}\}.*?\|\| (?P<timecode>(\d+:\d+){2,3})"
 
 # pagenames
 INFOBOX_EPISODE = 'Infobox Episode'
@@ -34,13 +34,13 @@ DUMP_DATE = datetime.strptime(DUMP_STRING, '%H:%M, %B %d, %Y')
 
 # date and time
 TIMEZONE = ZoneInfo("America/Los_Angeles")  # where Critical Role is based
-DATE_REGEX = '\d{4}-\d{1,2}-\d{1,2}'
+DATE_REGEX = r'\d{4}-\d{1,2}-\d{1,2}'
 DATE_FORMAT = '%Y-%m-%d'
-DATE_2_REGEX = '\d{1,2}-\d{1,2}-\d{4}'
+DATE_2_REGEX = r'\d{1,2}-\d{1,2}-\d{4}'
 DATE_2_FORMAT = '%m-%d-%Y'
-TIME_REGEX = '\d{1,2}:\d{2}\s*(?P<tz_entry>\w{2,3})?'
+TIME_REGEX = r'\d{1,2}:\d{2}\s*(?P<tz_entry>\w{2,3})?'
 TIME_FORMAT = '%H:%M'
-DATETIME_REGEX = '\s*'.join([DATE_REGEX, TIME_REGEX])
+DATETIME_REGEX = r'\s*'.join([DATE_REGEX, TIME_REGEX])
 DATETIME_FORMAT = ' '.join([DATE_FORMAT, TIME_FORMAT])
 date_options = ((DATETIME_REGEX, DATETIME_FORMAT),
                 (DATE_REGEX, DATE_FORMAT),
@@ -48,9 +48,9 @@ date_options = ((DATETIME_REGEX, DATETIME_FORMAT),
                 (TIME_REGEX, TIME_FORMAT),
                )
 # runtimes
-RUNTIME_REGEX = '\d{1,2}:\d{2}:\d{2}'
+RUNTIME_REGEX = r'\d{1,2}:\d{2}:\d{2}'
 RUNTIME_FORMAT = '%H:%M:%S'
-RUNTIME_2_REGEX = '\d{1,2}:\d{2}'
+RUNTIME_2_REGEX = r'\d{1,2}:\d{2}'
 RUNTIME_2_FORMAT = '%M:%S'
 runtime_options = ((RUNTIME_REGEX, RUNTIME_FORMAT),
                    (RUNTIME_2_REGEX, RUNTIME_2_FORMAT),
@@ -113,7 +113,7 @@ class Actors:
             self.name_string = ''
 
     def match_actors(self):
-        actors = re.split('[^\w\s]+', self._input_names)
+        actors = re.split(r'[^\w\s]+', self._input_names)
         matched_list = []
         for actor in actors:
             actor = actor.strip()
@@ -400,10 +400,10 @@ def remove_comments(wikicode, return_string=True):
 def wikify_html_string(html_string):
     '''Replace italics and bold html with equivalent wiki markup.'''
     # italics
-    html_string = re.sub('</?i>', "''", html_string)
+    html_string = re.sub(r'</?i>', "''", html_string)
 
     # bold
-    html_string = re.sub('</?b>', "'''", html_string)
+    html_string = re.sub(r'</?b>', "'''", html_string)
 
     html_fixes = {
         '&amp;': '&',
