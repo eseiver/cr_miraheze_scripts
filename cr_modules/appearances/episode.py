@@ -39,9 +39,9 @@ HEADING_CONVERTER = {
 CHARACTERS_SECTION_NAME = 'featured characters'
 APPEARANCES_SECTION_NAME = 'appearances and mentions'
 
-externally_linked_name_regex = '\*+\s*\[http.*?\s(?P<name>.*?)\]'
-linked_character_regex = '\*+\s*(<s>)?(\")?\[\[(?P<name>.*?)(\|(?P<alt_name>.*?))?\]\](</s>)?(\")?(?P<raw_description>.*)?'
-unlinked_character_regex = '\*\s*(<s>)?(\")?(?P<name>[A-Za-z\"\.\s]+\w+)(\")?(</s>)?(\s*(\:|\,|\-|\—|\–)\s*(?P<raw_description>.*))?'
+externally_linked_name_regex = r'\*+\s*\[http.*?\s(?P<name>.*?)\]'
+linked_character_regex = r'\*+\s*(<s>)?(\")?\[\[(?P<name>.*?)(\|(?P<alt_name>.*?))?\]\](</s>)?(\")?(?P<raw_description>.*)?'
+unlinked_character_regex = r'\*\s*(<s>)?(\")?(?P<name>[A-Za-z\"\.\s]+\w+)(\")?(</s>)?(\s*(\:|\,|\-|\—|\–)\s*(?P<raw_description>.*))?'
 
 class pyEpisode(pyPage):
     @property
@@ -219,7 +219,7 @@ class FeaturedCharactersParser:
 
         converted_heading = HEADING_CONVERTER[heading]
 
-        if re.search('\*\s*(<s>)?(\")?s*\[\[', line):
+        if re.search(r'\*\s*(<s>)?(\")?s*\[\[', line):
             linked = True
             name_info = re.search(linked_character_regex, line).groupdict()
         elif re.search(externally_linked_name_regex, line):
@@ -227,9 +227,9 @@ class FeaturedCharactersParser:
             name_info['name'] = re.search(externally_linked_name_regex, line).group('name')
         elif '[[' in line and line.strip().startswith('*'):
             # catch the stragglers who are linked, but not unlinked chars with links in description
-            first_line = re.split('\,|-|\:|\(', line)[0]
+            first_line = re.split(r'\,|-|\:|\(', line)[0]
             if all([x in first_line for x in ['[[', ']]']]):
-                name_info['name'] = re.search('(?<=\[\[)(?P<linked_name>.*?)(?=\||\]\])', first_line).group('linked_name')
+                name_info['name'] = re.search(r'(?<=\[\[)(?P<linked_name>.*?)(?=\||\]\])', first_line).group('linked_name')
                 # logger.debug(f"Got linked char: {name_info['name']}, {line}")
                 # guessing linked, for now
                 linked = True
@@ -273,7 +273,7 @@ class FeaturedCharactersParser:
                     new_status =  line.split(']]', 1)[1]
                     logger.debug(f"New status: {line}")
                 else:
-                    new_status = re.split('(:|,|-)', line)[-1]
+                    new_status = re.split(r'(:|,|-)', line)[-1]
                     logger.debug(f"New status: {line}")
                 status = 'appear'  # new status better not negate this
         else:

@@ -121,7 +121,7 @@ def process_appearance_plainlist(wikicode):
     list_items = process_plainlist(wikicode)
     item_dict = {}
     for item in list_items:
-        sub_items = [x for x in re.split('(:\<br\/\>|(?<![\w])\s)',
+        sub_items = [x for x in re.split(r'(:\<br\/\>|(?<![\w])\s)',
                                          item,
                                          maxsplit=1)
                      if x.strip()]
