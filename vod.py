@@ -262,7 +262,7 @@ class EpisodeBot(
             new_text = text
 
         # have editor decide whether to add on the summary or not
-        if new_text != text:
+        if new_text != text and self.opt.update_page:
             pywikibot.showDiff(text, new_text)
             do_it = pywikibot.input_yn('Continue with summary addition?')
             if do_it:
@@ -292,31 +292,32 @@ class EpisodeBot(
                          '')
         shortdesc_value = ''
 
-        if (isinstance(shortdesc, mwparserfromhell.wikicode.Template) and
-            shortdesc[1].strip() != 'Campaign 3 Episode x'):
-            pywikibot.output("Short description already on episode page; creation skipped.")
-        elif ep.shortdesc_value:
-            # if one-shot in the episode title, no shortdesc is needed
-            if ep.prefix == 'OS' and any(
-                any(
-                    target.lower() in value.lower()
-                    for target in ['one-shot', 'one shot']
-                )
-                for value in [old_ep_name, self.opt.new_ep_name]
-            ):
-                shortdesc_value = 'none'
+        if self.opt.update_page:
+            if (isinstance(shortdesc, mwparserfromhell.wikicode.Template) and
+                shortdesc[1].strip() != 'Campaign 3 Episode x'):
+                pywikibot.output("Short description already on episode page; creation skipped.")
+            elif ep.shortdesc_value:
+                # if one-shot in the episode title, no shortdesc is needed
+                if ep.prefix == 'OS' and any(
+                    any(
+                        target.lower() in value.lower()
+                        for target in ['one-shot', 'one shot']
+                    )
+                    for value in [old_ep_name, self.opt.new_ep_name]
+                ):
+                    shortdesc_value = 'none'
+                else:
+                    shortdesc_value = ep.shortdesc_value
+                pywikibot.output(shortdesc_value)
+                answer = pywikibot.input("Hit enter to accept automatic short description or write your own:")
+                if answer:
+                    shortdesc_value = answer
+                else:
+                    pass
             else:
-                shortdesc_value = ep.shortdesc_value
-            pywikibot.output(shortdesc_value)
-            answer = pywikibot.input("Hit enter to accept automatic short description or write your own:")
-            if answer:
-                shortdesc_value = answer
-            else:
-                pass
-        else:
-            write_shortdesc = pywikibot.input_yn("No short description auto-generated. Write one?")
-            if write_shortdesc:
-                shortdesc_value = pywikibot.input("Please write the short description (no template info)")
+                write_shortdesc = pywikibot.input_yn("No short description auto-generated. Write one?")
+                if write_shortdesc:
+                    shortdesc_value = pywikibot.input("Please write the short description (no template info)")
 
 
         # handle infobox
@@ -876,7 +877,7 @@ def get_navbox(navbox_text):
     else:
         assert isinstance(navbox_text, str)
         navbox_wikicode = mwparserfromhell.parse(navbox_text)
-    navbox = next((x for x in navbox_wikicode.filter_templates() if x.name.matches('Navbox')), None)
+    navbox = next((x for x in navbox_wikicode.filter_templates() if x.name.contains('Navbox')), None)
     return navbox
 
 
@@ -1240,10 +1241,11 @@ def main(*args: str) -> None:
         elif option == 'airtime':
             options['airtime'] = Airdate(value)
         elif option in (
-            'summary', 'actors', 'runtime', 'new_ep_name', 'episode_summary', 'image_name'):
+            'summary', 'runtime', 'new_ep_name', 'episode_summary', 'image_name'):
             if not value:
-                value = pywikibot.input('Please enter a value for ' + arg)
-            options[option] = value
+                value = pywikibot.input(f'Please enter a value for {arg} (leave blank to ignore)')
+            if value:
+                options[option] = value
         # take the remaining options as booleans.
         else:
             options[option] = True
@@ -1351,6 +1353,9 @@ def main(*args: str) -> None:
                     options['airtime'].datetime.timetz()))
         if options.get('new_page_name') != bot1.opt.new_page_name:
             options['new_page_name'] = bot1.opt.new_page_name
+        if (options.get('ep_list') or options.get('airdate_order')) and not options.get('airdate'):
+            airdate_string = get_validated_input(arg='airdate', regex=DATE_REGEX)
+            options['airdate'] = Airdate(airdate_string)
 
         # if image thumbnail field was filled in, do not upload.
         if bot1.opt.upload is False:
@@ -1410,9 +1415,6 @@ def main(*args: str) -> None:
             bot6.treat_page()
 
         if options.get('airdate_order'):
-            if not options.get('airdate'):
-                airdate_string = pywikibot.input('Please enter episode airdate (YYYY-MM-DD)')
-                options['airdate'] = Airdate(airdate_string)
             bot7 = AirdateBot(generator=gen, **options)
             bot7.treat_page()
             options['airdate_dict'] = bot7.opt.airdate_dict
