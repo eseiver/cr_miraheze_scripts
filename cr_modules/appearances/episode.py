@@ -1,11 +1,12 @@
 import re
+from copy import deepcopy
 from dataclasses import dataclass, field
 
 import mwparserfromhell
 from tqdm import tqdm
 
-from ..cr import pyPage
-from ..ep import EpisodeReader, Ep
+from ..cr import pyPage, YT
+from ..ep import EpisodeReader, Ep, LuaReader
 from .character import pyCharacter
 from .logger_config import logger 
 from .processor import CharacterManager
@@ -43,6 +44,26 @@ externally_linked_name_regex = r'\*+\s*\[http.*?\s(?P<name>.*?)\]'
 linked_character_regex = r'\*+\s*(<s>)?(\")?\[\[(?P<name>.*?)(\|(?P<alt_name>.*?))?\]\](</s>)?(\")?(?P<raw_description>.*)?'
 unlinked_character_regex = r'\*\s*(<s>)?(\")?(?P<name>[A-Za-z\"\.\s]+\w+)(\")?(</s>)?(\s*(\:|\,|\-|\—|\–)\s*(?P<raw_description>.*))?'
 
+@dataclass
+class YTReader(LuaReader):
+    '''Read-only information about YouTube IDs for each episode.'''
+    module_name: str = 'Ep/YTURLSwitcher/URLs'
+    json_filename: str = 'yt_ids.json'
+
+    def custom_cleanup(self, _json):
+        '''When downloading .json, use YT class to clean urls to ids.'''
+        copied_json = deepcopy(_json)
+        _json = {k: YT(v).yt_id for k, v in copied_json.items()}
+        return _json
+
+
+@dataclass
+class AirdateReader(LuaReader):
+    '''Read-only information about airdates for each episode.'''
+    module_name: str = 'AirdateOrder/Array'
+    json_filename: str = 'airdates.json'
+
+
 class pyEpisode(pyPage):
     @property
     def episode_code(self):
@@ -62,6 +83,14 @@ class pyEpisode(pyPage):
             episodes_data = EpisodeReader(force_download=True)
             episodes_data.download_json()
             cls._episodes_data = episodes_data._json
+        if not hasattr(cls, '_yt_data') or not cls._yt_data:
+            yt_data = YTReader(force_download=True)
+            yt_data.download_json()
+            cls._yt_data = yt_data._json
+        if not hasattr(cls, '_airdate_data') or not cls._airdate_data:
+            airdate_data = AirdateReader(force_download=True)
+            airdate_data.download_json()
+            cls._airdate_data = airdate_data._json
 
     @property
     def episode_data(self):

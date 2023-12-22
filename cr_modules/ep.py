@@ -77,6 +77,7 @@ MAIN_CHARACTER_DICT = {
 DATA_PATH = '/'.join([pywikibot.config.user_script_paths[0], 'data'])
 os.makedirs(DATA_PATH, exist_ok=True)
 
+
 @dataclass
 class LuaReader:
     '''For storing Lua data modules as json and reading from them.'''
@@ -105,6 +106,10 @@ class LuaReader:
                         json_file.write(json.dumps(self._json, indent=4))
                     else:
                         json_file.write(json.dumps(self._json))
+
+    @property
+    def is_cached(self):
+        return os.path.exists(self.json_filename)
 
     def download_json(self):
         site = pywikibot.Site()
