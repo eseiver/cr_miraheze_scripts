@@ -31,6 +31,8 @@ DUMP_FILE = 'criticalrolewiki_xml_a7650150ba69dbad0a0c.xml.gz'
 DUMP_STRING = '09:26, October 21, 2023'
 DUMP_PATH = os.path.join(DATA_PATH, DUMP_FILE)
 DUMP_DATE = datetime.strptime(DUMP_STRING, '%H:%M, %B %d, %Y')
+LATEST_DUMP_FILE = 'latest_revisions-20231209.xml.gz'
+LATEST_DUMP_PATH = os.path.join(DATA_PATH, LATEST_DUMP_FILE)
 
 # date and time
 TIMEZONE = ZoneInfo("America/Los_Angeles")  # where Critical Role is based
