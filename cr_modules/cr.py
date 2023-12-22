@@ -16,6 +16,7 @@ from .ep import Ep, LuaReader, DATA_PATH
 
 # regular expressions for string matching
 ARRAY_ENTRY_REGEX = r'''\[\"(?P<epcode>.*?)\"\] = \{\s*\[\"title\"\] = \"(?P<title>.*)\",?((\s*\[\"pagename\"\] = \"(?P<pagename>.*)\",)?(\s*\[\"altTitles\"\] = \{(?P<altTitles>.*)\})?)?'''
+LONG_SHORT_REGEX = r"\|\s*(?P<num>\d+)\s*\|\|.*?\{\{ep\|(?P<ep_code>.*?)(\|.*?)?\}\}.*?\|\| (?P<timecode>(\d+:\d+){2,3})"
 YT_LINK_REGEX = r'(?P<vod>(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))(?P<yt_id>[-\w_]{11})(&t=(?P<timecode>.*))?)'
 YT_ID_REGEX = r'[-\w_]{11}'
 LONG_SHORT_REGEX = r"\|\s*(?P<num>\d+)\s*\|\|.*?\{\{ep\|(?P<ep_code>.*?)(\|.*?)?\}\}.*?\|\| (?P<timecode>(\d+:\d+){2,3})"
@@ -88,6 +89,34 @@ def join_array_on_and(str_iter):
     elif len(str_iter) > 2:
         return_val = ', '.join([*str_iter[:-1], f'and {str_iter[-1]}'])
     return return_val
+
+
+class YT:
+    def __init__(self, yt_string):
+        yt_string = yt_string.strip()
+        self._entry = yt_string
+        if re.search(YT_LINK_REGEX, yt_string):
+            self.yt_id = re.search(YT_LINK_REGEX, yt_string)['yt_id']
+        elif re.match(YT_ID_REGEX, yt_string):
+            self.yt_id = yt_string
+        else:
+            self.yt_id = None
+
+    @property
+    def url(self):
+        url = f"https://youtu.be/{self.yt_id}"
+        return url
+
+    @property
+    def thumbnail_url(self):
+        url = f"https://img.youtube.com/vi/{self.yt_id}/maxresdefault.jpg"
+        return url
+
+    @property
+    def thumbnail_url_backup(self):
+        url = f"https://img.youtube.com/vi/{self.yt_id}/hqdefault.jpg"
+        return url
+
 
 @dataclass
 class ActorData(LuaReader):
@@ -208,33 +237,6 @@ def make_image_file_description(ep: Ep, actors: Actors) -> str:
 
 [[Category:{ep.campaign.thumbnail_category}]]"""
     return file_description
-
-
-class YT:
-    def __init__(self, yt_string):
-        yt_string = yt_string.strip()
-        self._entry = yt_string
-        if re.search(YT_LINK_REGEX, yt_string):
-            self.yt_id = re.search(YT_LINK_REGEX, yt_string)['yt_id']
-        elif re.match(YT_ID_REGEX, yt_string):
-            self.yt_id = yt_string
-        else:
-            self.yt_id = None
-
-    @property
-    def url(self):
-        url = f"https://youtu.be/{self.yt_id}"
-        return url
-
-    @property
-    def thumbnail_url(self):
-        url = f"https://img.youtube.com/vi/{self.yt_id}/maxresdefault.jpg"
-        return url
-
-    @property
-    def thumbnail_url_backup(self):
-        url = f"https://img.youtube.com/vi/{self.yt_id}/hqdefault.jpg"
-        return url
 
 
 def convert_timezone(string, tz=TIMEZONE):
