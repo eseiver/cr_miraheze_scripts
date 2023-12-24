@@ -269,8 +269,9 @@ class Ep:
         return hash(self.code)
 
     def standardize_code(self, code):
-        '''Format standardized with single zero padding'''
+        '''Format standardized with single zero padding and capitalized prefix'''
         prefix, number = code.split('x')
+        prefix = prefix.upper().replace('MIDST', 'Midst')
         if number[-1].isdigit():
             number = int(number)
             standardized_code = 'x'.join([prefix, f"{number:02}"])
