@@ -8,7 +8,7 @@ import pywikibot
 from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound
 from youtube_transcript_api.formatters import JSONFormatter
 
-from .cr import wikify_html_string, ActorData, Ep
+from .cr import wikify_html_string, ActorData, Ep, YT
 from .ep import DATA_PATH
 
 TRANSCRIPT_PATH = os.path.join(DATA_PATH, 'generated_transcripts')
@@ -147,10 +147,14 @@ class Breakfinder:
 
 
 class YoutubeTranscript:
-    def __init__(self, ep, yt, write_ts_file=False, ignore_duplicates=False,
+    def __init__(self, ep, yt=None, write_ts_file=False, ignore_duplicates=False,
                  ignore_break=False, try_local_file=True, preserve_formatting=True,
                  force_redownload=False, **kwargs):
+        if isinstance(ep, str):
+            ep = Ep(ep)
         self.ep = ep
+        if isinstance(yt, str):
+            yt = YT(yt)
         self.yt = yt
         self.transcript_folder = TRANSCRIPT_PATH
         self.json_folder = JSON_PATH
@@ -163,6 +167,7 @@ class YoutubeTranscript:
         self.ignore_duplicates = ignore_duplicates
         self.preserve_formatting = preserve_formatting
         self.actor_data = actor_data
+        self.transcript_dict = {}
         self.dupe_lines = {}
 
     def create_from_json_file(self, language=DEFAULT_LANGUAGE):
@@ -191,9 +196,12 @@ class YoutubeTranscript:
 
     @property
     def transcript_list(self):
-        if  not hasattr(self, '_transcript_list') or self._transcript_list is None:
-            self._transcript_list = YouTubeTranscriptApi.list_transcripts(self.yt.yt_id)
-        return self._transcript_list
+        if self.yt is None:
+            return None
+        else:
+            if not hasattr(self, '_transcript_list') or self._transcript_list is None:
+                self._transcript_list = YouTubeTranscriptApi.list_transcripts(self.yt.yt_id)
+            return self._transcript_list
 
     @property
     def languages(self, manual_only=True):
@@ -208,6 +216,7 @@ class YoutubeTranscript:
     def captions_download(self, language=DEFAULT_LANGUAGE):
         if not hasattr(self, 'captions_dict'):
             self.captions_dict = {}
+        captions = None
         transcript = None
 
         language_list = [language]
@@ -220,6 +229,8 @@ class YoutubeTranscript:
                 self.manual = False
             except NoTranscriptFound:
                 pywikibot.output(f'Youtube video for {self.ep.code} does not have any {language} captions')
+        except AttributeError:
+            pywikibot.output(f'No YouTube ID given or found for {self.ep.code}')
         if transcript:
             captions = transcript.fetch(preserve_formatting=True)
             self.captions_dict[language] = captions
@@ -378,9 +389,13 @@ class YoutubeTranscript:
 
     def process_captions(self, captions=None, language=DEFAULT_LANGUAGE):
         '''Combine raw captions across line breaks to create transcript.'''
+        transcript = None
 
         if captions is None and language:
             captions = self.captions_dict.get(language, {})
+
+        if not captions:
+            return transcript
 
         # split captions along linebreaks if a new speaker
         caption_lines = self.divide_captions_by_speaker(language=language)
@@ -520,7 +535,11 @@ class YoutubeTranscript:
             except FileNotFoundError:
                 pass
         if not self.captions_dict.get(language) or self.force_redownload is True:
-            captions = self.captions_download(language=language)
+            if self.yt:
+                captions = self.captions_download(language=language)
+            else:
+                pywikibot.output(f"Cannot download; no YouTube ID given or found for {self.ep.code}. No local file found.")
+                return
         else:
             pass
         self.captions_dict[language] = captions
@@ -529,5 +548,8 @@ class YoutubeTranscript:
         self.transcript_dict[language] = self.process_transcript(language=language)
 
     def download_all_language_transcripts(self):
+        if not self.yt:
+            pywikibot.output(f"Cannot download; no YouTube ID given or found for {self.ep.code}. No local file found.")
+            return
         for language in self.languages:
             self.download_and_build_transcript(language=language)
