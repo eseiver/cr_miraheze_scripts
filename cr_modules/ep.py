@@ -73,6 +73,53 @@ class EpisodeReader(LuaReader):
             _json[k]['pagename'] = v.get('pagename', v['title'])
         return _json
 
+    @property
+    def conversion_dict(self):
+        if not hasattr(self, '_conversion_dict') or self._conversion_dict is None:
+            self._conversion_dict = self.build_conversion_dict()
+        return self._conversion_dict
+
+    def build_conversion_dict(self):
+        new_dict = {}
+        for k, v in self._json.items():
+            if v:
+                all_values = ([v[key] for key in v.keys() if not isinstance(v[key], list)]
+                        + v.get('altTitles', []) + [k.lower()])
+            else:
+                v = {'title': ''}
+                all_values = [k.lower()]
+            if not v.get('pagename'):
+                v['pagename'] = v['title']
+            for value in all_values:
+                new_dict[value.lower()] = {
+                    'pagename': v['pagename'],
+                    'episode_title': v['title'],
+                    'episode_code': k,
+                }
+        return new_dict
+
+    def get_ep_dict(self, value):
+        # first try calling ep directly:
+        ep = Ep(value)
+        if ep.code == '0x00':
+            value = value.lower()
+            ep_dict = self.conversion_dict.get(value, {})
+        else:
+            ep_dict = self.conversion_dict.get(ep.code, {})
+        return ep_dict
+
+    def get_pagename(self, value):
+        ep_dict = self.get_ep_dict(value)
+        return ep_dict.get('pagename', '')
+
+    def get_title(self, value):
+        ep_dict = self.get_ep_dict(value)
+        return ep_dict.get('episode_title', '')
+
+    def get_ep_code(self, value):
+        ep_dict = self.get_ep_dict(value)
+        return ep_dict.get('episode_code', '')
+
 
 @dataclass
 class Decoder(LuaReader):
