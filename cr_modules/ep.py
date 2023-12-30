@@ -190,12 +190,15 @@ class EpisodeReader(LuaReader):
 
     def get_ep_dict(self, value):
         # first try calling ep directly:
-        ep = Ep(value)
+        try:
+            ep = Ep(value, suppress_warnings=True)
+        except ValueError:
+            ep = Ep('0x00', suppress_warnings=True)
         if ep.code == '0x00':
-            value = value.lower()
+            value = value.strip().lower()
             ep_dict = self.conversion_dict.get(value, {})
         else:
-            ep_dict = self.conversion_dict.get(ep.code, {})
+            ep_dict = self.conversion_dict.get(ep.code.lower(), {})
         return ep_dict
 
     def get_pagename(self, value):
@@ -396,7 +399,7 @@ class Arc(Season):
 
 class Ep:
     '''for handling episode ids'''
-    def __init__(self, episode_code, padding_limit=2, ep_regex=None):
+    def __init__(self, episode_code, padding_limit=2, ep_regex=None, suppress_warnings=False):
         episode_code = episode_code.strip()
 
         if not ep_regex:
@@ -420,7 +423,10 @@ class Ep:
             else:
                 output = f'<<yellow>>{episode_code}<<default>> is not in format CxNN'
                 episode_code = '0x00'
-            pywikibot.output(output)
+            if suppress_warnings:
+                pass
+            else:
+                pywikibot.output(output)
 
         self.code = self.standardize_code(episode_code)
         self._code = episode_code
