@@ -819,7 +819,7 @@ class TranscriptBot(EpisodeBot):
 class TranscriptListBot(EpisodeBot):
     '''For updating the list of transcripts with the transcript of the newest episode.'''
     def build_transcript_entry(self):
-        transcript_entry = f"""* {self.opt.ep.wiki_code} [[Transcript:{self.opt.new_page_name}|Transcript]]"""
+        transcript_entry = f"""* {self.opt.ep.wiki_code} - [[Transcript:{self.opt.new_page_name}|Transcript]]"""
         return transcript_entry
 
     def treat_page(self):
