@@ -649,8 +649,10 @@ class EpListBot(EpisodeBot):
             host = ''
         if self.opt.ep.prefix == '4SD':
             wiki_code = ep.wiki_noshow
+            transcript = ''
         else:
             wiki_code = ep.wiki_code
+            transcript = f'{{{{ep/Transcript|{ep.code}|style=unlinked}}}}'
         if self.opt.ep.prefix == 'OS':
             game_system = self.opt.game_system
         else:
@@ -660,6 +662,7 @@ class EpListBot(EpisodeBot):
             'ep': wiki_code,
             'airdate': self.opt.airdate.date,
             'VOD': ep.wiki_vod,
+            'transcript': transcript,
             'runtime': self.opt.runtime,
             'aux1': host,
             'aux2': game_system,
@@ -1103,7 +1106,7 @@ class LongShortBot(EpisodeBot):
 
     def treat_page(self):
         if self.opt.ep.prefix == '4SD':
-            return pywikibot.output('Skipping longest/shortest checking for {}')
+            return pywikibot.output(f'Skipping longest/shortest checking for {self.opt.ep.code}')
         self.current_page = pywikibot.Page(self.site, 'Longest and shortest episodes')
         is_longest = self.check_if_longest()
         is_shortest = self.check_if_shortest()
