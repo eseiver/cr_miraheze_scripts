@@ -1304,7 +1304,9 @@ def main(*args: str) -> None:
         options['new_page_name'] = options['new_ep_name']
 
     # if 4SD, make sure host is provided. If one-shot, default host/DM/GM to Matt.
-    if options['ep'].prefix == '4SD' and not options.get('host'):
+    if (options['ep'].prefix == '4SD' and
+        not options.get('host') and
+        (options['update_page'] or options['ep_list'])):
         host = pywikibot.input(f"4-Sided Dive host for {options['ep'].code} (first name ok)")
         options['host'] = Actors(host, link=False, actor_data=ACTOR_DATA)
     if options['ep'].prefix == 'OS':
