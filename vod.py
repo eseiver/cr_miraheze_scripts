@@ -1038,7 +1038,7 @@ class AirdateBot(EpisodeBot):
         # save airdate_dict to options
         airdate_dict = self.get_airdate_dict()
         if not airdate_dict:
-            pywikibot.output('Airdate module process canceled due to date mismatch.')
+            pywikibot.output('Cannot read airdate array; airdate module process canceled.')
             return None
         self.opt.airdate_dict = airdate_dict
 
@@ -1062,7 +1062,7 @@ class Connect4SDBot(AirdateBot, EpArrayBot):
         '''For constructing the list of (C3) episodes connected to the current 4SD episode.'''
         airdate_dict = self.get_airdate_dict()
         if not airdate_dict:
-            pywikibot.output('4SD connector process has been canceled due to date mismatch.')
+            pywikibot.output('Cannot read airdate array; 4SD connector process canceled.')
             return None
         array_dicts = self.get_array_dicts()
         ep_4SD = self.opt.ep
