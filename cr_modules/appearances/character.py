@@ -15,7 +15,7 @@ class pyCharacter(pyPage):
         if not hasattr(cls, '_conversion_dict') or not cls._conversion_dict:
             episodes_data = EpisodeReader()
             episodes_data.download_json()
-            cls._conversion_dict = episodes_data.create_ep_conversion_dict()
+            cls._conversion_dict = episodes_data.build_conversion_dict()
 
     @property
     def appearances_section(self):
@@ -97,10 +97,14 @@ class pyCharacter(pyPage):
 
     @property
     def episodes(self):
-        eps = [x['work'] if re.match(EP_REGEX, x['work'])
-        else self._conversion_dict.get(x['work'].lower(), '').get('episode_code', '')
-        if self._conversion_dict.get(x['work'].lower()) else ''
-        for x in self.appearances]
+        eps = [
+            # try matching episode code
+            x['work'] if re.match(EP_REGEX, x['work'])
+            # then try getting from conversion dict
+            else self._conversion_dict.get(x['work'].lower(), '').get('episode_code', '')
+            if self._conversion_dict.get(x['work'].lower()) else ''
+            for x in self.appearances
+            ]
         eps = [Ep(ep) for ep in eps if ep]
         return eps
 

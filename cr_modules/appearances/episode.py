@@ -151,17 +151,17 @@ class pyEpisode(pyPage):
                 logger.info(f'{name}: page does not exist')
                 continue
             if not isinstance(page, pyCharacter):
-                logger.info(f'{page.title()}: page not is character')
+                logger.info(f'{page.title()}: page not is character {type(page)}')
                 continue
             if char_dict.get('campaign_pc') and char_dict.get('status') == 'appear':
                 logger.debug(f'{page.title()}: skipping standard campaign PC appearance')
                 continue
-            if not self.episode_code.code in page.episodes:
+            if not self.episode_code in page.episodes:
                 no_errors = False
                 logger.info(
                     f'{page.title()} does not have {self.title()} ({self.episode_code}) in appearances')
         if no_errors:
-            logger.info(f'All characters found to have {self.title()} in appearances')
+            logger.info(f'All guest and NPC characters have {self.title()} in appearances')
 
 
 @dataclass

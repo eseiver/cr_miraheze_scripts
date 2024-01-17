@@ -584,12 +584,12 @@ class pyPage(pywikibot.Page):
         if site is None:
             site = pywikibot.Site()
         if dump_path is None:
-            dump_path = DUMP_PATH
+            dump_path = LATEST_DUMP_PATH
         # Create an XmlDump object and find an XmlEntry for the given title
         dump = XmlDump(dump_path, revisions='latest')
         xml_entry = next((x for x in dump.parse() if x.title == title), {})
 
-        py_page = cls.create_from_xml_entry(site, xml_entry)
+        py_page = cls.create_from_xml_entry(xml_entry, site=site)
         return py_page
 
     @classmethod
@@ -597,7 +597,7 @@ class pyPage(pywikibot.Page):
         if site is None:
             site = pywikibot.Site()
         if dump_path is None:
-            dump_path = DUMP_PATH
+            dump_path = LATEST_DUMP_PATH
         dump = XmlDump(dump_path, revisions='latest')
         xml_entries = [x for x in dump.parse() if x.title in titles]
 
