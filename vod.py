@@ -979,7 +979,7 @@ class AirdateBot(EpisodeBot):
         return airdate_entry
 
     def parse_airdate_page(self):
-        airdate_module_regex = fr'\\{{epCode = "(?P<ep_code>.*?)", date = "(?P<airdate_entry>.*)"\\}}'
+        airdate_module_regex = r'\{epCode\s*=\s*"(?P<ep_code>.*?)",\s*date\s*=\s*"(?P<airdate_entry>.*?)"\}'
         self.current_page = pywikibot.Page(self.site, AIRDATE_ORDER)
         text = self.current_page.text
 
