@@ -417,9 +417,12 @@ class EpisodeBot(
             and (self.opt.transcript or transcript_page.exists())
             and self.opt['ep'].prefix not in self.opt.TRANSCRIPT_EXCLUSIONS
             ):
-            synopsis_heading = next(x for x in wikicode.filter_headings() if x.title.matches('Synopsis'))
-            text = text.replace(str(synopsis_heading), str(synopsis_heading) + '\n{{TranscriptLink}}\n')
-            assert 'TranscriptLink' in text
+            synopsis_heading = next((x for x in wikicode.filter_headings() if x.title.matches('Synopsis')), None)
+            if synopsis_heading:
+                text = text.replace(str(synopsis_heading), str(synopsis_heading) + '\n{{TranscriptLink}}\n')
+                assert 'TranscriptLink' in text
+            else:
+                pywikibot.output("No synopsis section found; link to transcript in article will not be added.")
 
         if self.opt.update_page:
             self.put_current(text, summary=self.opt.summary)
@@ -1105,7 +1108,7 @@ class LongShortBot(EpisodeBot):
     '''For checking whether the runtime of an episode is one of the longest or shortest'''
 
     def treat_page(self):
-        if self.opt.ep.prefix == '4SD':
+        if self.opt.ep.prefix in ['4SD', 'M', 'LVM', 'Midst']:
             return pywikibot.output(f'Skipping longest/shortest checking for {self.opt.ep.code}')
         self.current_page = pywikibot.Page(self.site, 'Longest and shortest episodes')
         is_longest = self.check_if_longest()
