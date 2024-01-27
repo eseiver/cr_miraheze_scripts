@@ -389,15 +389,20 @@ def remove_comments(wikicode, return_string=True):
     '''For an item of wikicode, strip out comments. Used to determine if an infobox value
     is truly empty.'''
     raw_value = str(wikicode)
+
+    # Check if there are comments in the wikicode
     if wikicode.filter_comments():
+        # Replace all comments in one go
         for comment in wikicode.filter_comments():
-            value = raw_value.replace(str(comment), '')
-    else:
-        value = wikicode
+            raw_value = raw_value.replace(str(comment), '')
 
     if return_string:
-        value = str(value)
+        value = raw_value
+    else:
+        value = mwparserfromhell.parse(raw_value)
+
     return value
+
 
 def wikify_html_string(html_string):
     '''Replace italics and bold html with equivalent wiki markup.'''
