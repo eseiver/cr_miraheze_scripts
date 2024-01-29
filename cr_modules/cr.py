@@ -463,6 +463,24 @@ def remove_comments(wikicode, return_string=True):
 
     return value
 
+def remove_tags_by_name(wikicode, tag_name, return_string=True):
+    '''For an item of wikicode, strip out content with a certain tag.'''
+    raw_value = str(wikicode)
+
+    # Check if there are tags in the wikicode
+    if wikicode.filter_tags():
+        # Replace all tags in one go
+        for item in wikicode.filter_tags():
+            if item.tag.matches(tag_name):
+                raw_value = raw_value.replace(str(item), '')
+
+    if return_string:
+        value = raw_value
+    else:
+        value = mwparserfromhell.parse(raw_value)
+
+    return value
+
 
 def wikify_html_string(html_string):
     '''Replace italics and bold html with equivalent wiki markup.'''
