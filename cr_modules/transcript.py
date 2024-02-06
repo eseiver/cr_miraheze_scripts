@@ -506,11 +506,13 @@ class YoutubeTranscript:
         else:
             t_dupe_cat = ''
 
+        t_dupe_cat = f'\n[[{t_dupe_cat}]]' if t_dupe_cat else ''
+
         ts = ''.join(['{{Transcript-Nav}}\n__FORCETOC__\n\n', 
                       ts,
                       '\n{{Transcript-Nav}}\n', 
                       f'[[{t_cat}]]',
-                      f'\n[[{t_dupe_cat}]]'])
+                      t_dupe_cat])
 
         if self.write_ts_file:
             os.makedirs(self.transcript_folder, exist_ok=True)
