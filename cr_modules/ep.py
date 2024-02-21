@@ -219,6 +219,12 @@ class Show:
     def __repr__(self):
         return f"Show({self.title}, '{self.prefix}')"
 
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.prefix == other.prefix
+        else:
+            return False
+
 
 class Campaign(Show):
     '''A show is more specifically called a campaign for Campaigns 1-3.'''
@@ -308,12 +314,28 @@ class Ep:
         return f'Ep({self.code})'
 
     def __eq__(self, other):
-        if isinstance(other, Ep):
+        if isinstance(other, self.__class__):
             return self.code == other.code
         return False
 
     def __hash__(self):
         return hash(self.code)
+
+    def __lt__(self, other):
+        if isinstance(other, self.__class__):
+            return self.prefix == other.prefix and self.number < other.number
+        raise TypeError("Cannot compare Ep with non-Ep")
+
+    def __gt__(self, other):
+        if isinstance(other, self.__class__):
+            return self.prefix == other.prefix and self.number > other.number
+        raise TypeError("Cannot compare Ep with non-Ep")
+
+    def __le__(self, other):
+        return self < other or self == other
+
+    def __ge__(self, other):
+        return self > other or self == other
 
     def standardize_code(self, code):
         '''Format standardized with single zero padding and capitalized prefix'''
