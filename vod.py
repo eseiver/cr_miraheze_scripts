@@ -1379,6 +1379,19 @@ def main(*args: str) -> None:
             else:
                 filename = options['ep'].image_filename
             thumbnail_url = select_thumbnail_url(options['yt'])
+            pywikibot.output(f"\n{description}\n")
+            keep = pywikibot.input_yn("Do you want to use this default image description?")
+            if not keep:
+                from pywikibot import editor as editarticle
+                editor = editarticle.TextEditor()
+                try:
+                    new_description = editor.edit(description)
+                    description = new_description
+                    pywikibot.output(f"\n<<yellow>>New description:<<default>>\n\n{description}\n")
+                except ImportError:
+                    raise
+                except Exception as e:
+                    pywikibot.error(e)
             if thumbnail_url:
                 thumbnail_bot = UploadRobot(
                     generator=gen,
@@ -1386,7 +1399,7 @@ def main(*args: str) -> None:
                     description=description,
                     use_filename=filename,
                     summary=summary,
-                    verify_description=True,
+                    verify_description=False,
                 )
                 thumbnail_bot.run()
             else:
