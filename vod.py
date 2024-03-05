@@ -129,6 +129,8 @@ from cr_modules.ep import *
 from cr_modules.transcript import YoutubeTranscript, DEFAULT_LANGUAGE
 from dupes import DupeDetectionBot
 
+MINISERIES = ['OS', 'E', 'CO']
+
 
 class EpisodeBot(
     SingleSiteBot,  # A bot only working on one site
@@ -1116,16 +1118,26 @@ class LongShortBot(EpisodeBot):
         if not is_shortest and not is_longest:
             pywikibot.output(f"{self.opt.ep.code} is neither a longest or shortest episode.")
 
+    def get_relevant_heading(self):
+        '''Use ep prefix to find section of page. Miniseries and one-shots go together.'''
+        ep = self.opt.ep
+        if ep.prefix in MINISERIES:
+            heading = Show('OS').title
+        else:
+            heading = ep.show.title
+        return heading
+
     def check_if_longest(self):
         ep = self.opt.ep
         runtime = Runtime(self.opt.runtime)
         wikicode = self.get_wikicode()
+        heading = self.get_relevant_heading()
         is_longest = False
         longest = next(x for x in wikicode.get_sections() if any([
             y.title.matches('Longest episodes') for y in x.filter_headings()]))
         longest_overall = longest.get_sections(flat=True)[1]
         relevant_section = next((section for section in longest.get_sections(flat=True)[2:]
-                        if ep.show.title.lower() in section.filter_headings()[0].title.lower()),
+                        if heading.lower() in section.filter_headings()[0].title.lower()),
                        '')
         for section in [relevant_section, longest_overall]:
             if not section:
@@ -1145,6 +1157,7 @@ class LongShortBot(EpisodeBot):
         ep = self.opt.ep
         runtime = Runtime(self.opt.runtime)
         wikicode = self.get_wikicode()
+        heading = self.get_relevant_heading()
         is_shortest = False
         shortest = next(x for x in wikicode.get_sections() if any(
             [y.title.matches('Shortest episodes') for y in x.filter_headings()]))
@@ -1153,7 +1166,7 @@ class LongShortBot(EpisodeBot):
         if not ep.is_campaign:
             shortest_overall = mwparserfromhell.parse(shortest_overall.split('Shortest episodes, exclud')[0])
         relevant_section = next((section for section in shortest.get_sections(flat=True)[2:]
-                                if ep.show.title.lower() in section.filter_headings()[0].title.lower()),
+                                if heading.lower() in section.filter_headings()[0].title.lower()),
                                '')
         for section in [relevant_section, shortest_overall]:
             if not section:
