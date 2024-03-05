@@ -117,18 +117,23 @@ class Actors:
     def match_actors(self):
         actors = re.split(r'[^\w\s]+', self._input_names)
         matched_list = []
+        all_names = self.actor_data.actor_names
+        all_unique_names = len(set([x.lower().split()[0] for x in all_names])) == len(all_names)
         for actor in actors:
             actor = actor.strip()
-            #skip joining words
+            # Skip joining words
             if actor.lower() in ['and', 'also']:
                 continue
-            candidates = [x for x in self.actor_data.actor_names if x and actor.lower() in x.lower()]
+            candidates = []
+            if all_unique_names:
+                candidates = [x for x in all_names if actor.lower() in x.lower().split()[0]]
+            if not candidates:
+                candidates = [x for x in all_names if actor.lower() in x.lower()]
             if len(candidates) == 1:
                 match = candidates[0]
             elif len(candidates) > 1:
                 choices = [(str(i+1), x) for i, x in enumerate(candidates)]
-                choice = pywikibot.input_choice(f"Please clarify '{actor}'",
-                                                choices)
+                choice = pywikibot.input_choice(f"Please clarify '{actor}'", choices)
                 match = next(x for x in candidates if x.lower() == choice.lower())
             elif self.matched_only:
                 pywikibot.output(f"No match for '{actor}'. Check spelling or re-run script using <<yellow>>-download_data<<default>> flag.")
