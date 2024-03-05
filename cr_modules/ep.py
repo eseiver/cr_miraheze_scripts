@@ -323,12 +323,22 @@ class Ep:
 
     def __lt__(self, other):
         if isinstance(other, self.__class__):
-            return self.prefix == other.prefix and self.number < other.number
+            if self.is_campaign and other.is_campaign and self.prefix < other.prefix:
+                return True
+            elif self.prefix == other.prefix:
+                return self.number < other.number
+            else:
+                return False
         raise TypeError("Cannot compare Ep with non-Ep")
 
     def __gt__(self, other):
         if isinstance(other, self.__class__):
-            return self.prefix == other.prefix and self.number > other.number
+            if self.is_campaign and other.is_campaign and self.prefix > other.prefix:
+                return True
+            elif self.prefix == other.prefix:
+                return self.number > other.number
+            else:
+                return False
         raise TypeError("Cannot compare Ep with non-Ep")
 
     def __le__(self, other):
