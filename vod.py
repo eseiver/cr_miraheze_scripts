@@ -46,6 +46,8 @@ A number of maintenance activities can be performed together (-all) or independe
 
 -navbox           Make sure the episode code is in the navbox, as determined from Module:Ep/Decoder
 
+-maint_cat        Check if the article maintenance category has been created
+
 -4SD              For 4-Sided Dive only, add ep_id to the 3xNN episodes since the previous
 
 Local data can be downloaded from various modules:
@@ -189,6 +191,7 @@ class EpisodeBot(
         'ts': None, # YoutubeTranscript object
         'redirects': None,  # add/update redirects from ep_id to new_page_name
         'navbox': None,  # add ep_id to the appropriate navbox template
+        'maint_cat': None,  # create article maintenance category for episode code
         '4SD': None,  # add 4SD param to 3xNN pages (4SD only)
     }
 
@@ -981,6 +984,24 @@ class NavboxBot(EpisodeBot):
         )
 
 
+class CategoryBot(EpisodeBot):
+    '''Create the article maintenance category for that episode code.'''
+
+    def treat_page(self):
+        ep = self.opt.ep
+        category_name = f'Category:Articles needing citations/{ep.code}'
+
+        self.current_page = pywikibot.Page(self.site, category_name)
+        text = '''[[Category:Articles needing citations]]\n__HIDDENCAT__'''
+        if not self.current_page.exists():
+            self.put_current(
+                text,
+                summary=f"Creating maintenance category (via pywikibot)"
+            )
+        else:
+            pywikibot.output(f'Maintenance category already exists for {ep.code}')
+
+
 class AirdateBot(EpisodeBot):
     '''For updating the airdate module with the newest episode's airdate.'''
 
@@ -1288,7 +1309,7 @@ def main(*args: str) -> None:
     # handle which things to run if all is selected, and set to False any not yet defined
     for task in ['update_page', 'move', 'upload', 'ep_list', 'yt_switcher', 'ep_array',
                  'airdate_order', 'transcript', 'transcript_list', 'redirects',
-                 'navbox', '4SD', 'long_short']:
+                 'navbox', '4SD', 'long_short', 'maint_cat']:
         if options.get('all'):
             options[task] = True
         elif not options.get(task):
@@ -1463,14 +1484,18 @@ def main(*args: str) -> None:
             bot6 = NavboxBot(generator=gen, **options)
             bot6.treat_page()
 
-        if options.get('airdate_order'):
-            bot7 = AirdateBot(generator=gen, **options)
+        if options.get('maint_cat'):
+            bot7 = CategoryBot(generator=gen, **options)
             bot7.treat_page()
+
+        if options.get('airdate_order'):
+            bot8 = AirdateBot(generator=gen, **options)
+            bot8.treat_page()
             options['airdate_dict'] = bot7.opt.airdate_dict
 
         if options['ep'].prefix == '4SD' and options.get('4SD'):
-            bot8 = Connect4SDBot(generator=gen, **options)
-            bot8.treat_page()
+            bot9 = Connect4SDBot(generator=gen, **options)
+            bot9.treat_page()
             if not options.get('array_dicts'):
                 options['array_dicts'] = bot8.opt.array_dicts
             if not options.get('airdate_dict'):
@@ -1480,12 +1505,12 @@ def main(*args: str) -> None:
             if options['ep'].prefix in TRANSCRIPT_EXCLUSIONS:
                 pywikibot.output(f'\nSkipping transcript page creation for {options["ep"].show.title} episode')
             else:
-                bot9 = TranscriptBot(generator=gen, **options)
-                bot9.treat_page()
-                if bot9.opt.ts:
-                    options['ts'] = bot9.opt.ts
-                bot10 = TranscriptRedirectBot(generator=gen, **options)
+                bot10 = TranscriptBot(generator=gen, **options)
                 bot10.treat_page()
+                if bot10.opt.ts:
+                    options['ts'] = bot9.opt.ts
+                bot11 = TranscriptRedirectBot(generator=gen, **options)
+                bot11.treat_page()
 
         if options.get('ts'):
             dupe_count = len(options['ts'].dupe_lines[DEFAULT_LANGUAGE])
@@ -1497,9 +1522,9 @@ def main(*args: str) -> None:
                 has_dupes = False
                 pywikibot.output('No duplicates found in transcript to process.')
             if dupes:
-                bot11 = DupeDetectionBot(generator=gen, **options)
-                bot11.current_page = pywikibot.Page(bot11.site, f"Transcript:{options['new_ep_name']}")
-                bot11.treat_page()
+                bot12 = DupeDetectionBot(generator=gen, **options)
+                bot12.current_page = pywikibot.Page(bot11.site, f"Transcript:{options['new_ep_name']}")
+                bot12.treat_page()
             elif has_dupes:
                 command = f"\n<<yellow>>python pwb.py dupes -ep:{options['ep'].code} -yt:{options['yt'].yt_id}<<default>>"
                 pywikibot.output(f'Skipping ts duplicate processing. You can run this later:{command}')
@@ -1508,15 +1533,15 @@ def main(*args: str) -> None:
             if options['ep'].prefix in TRANSCRIPT_EXCLUSIONS:
                 pywikibot.output(f'\nSkipping transcript list update for {options["ep"].show.title} episode')
             else:
-                bot12 = TranscriptListBot(generator=gen, **options)
-                bot12.treat_page()
+                bot13 = TranscriptListBot(generator=gen, **options)
+                bot13.treat_page()
 
         if options.get('long_short'):
             if options['ep'].prefix == '4SD':
                 pywikibot.output(f'\nSkipping longest/shortest for {options["ep"].show.title} episode')
             else:
-                bot13 = LongShortBot(generator=gen, **options)
-                bot13.treat_page()
+                bot14 = LongShortBot(generator=gen, **options)
+                bot14.treat_page()
 
 
 if __name__ == '__main__':
