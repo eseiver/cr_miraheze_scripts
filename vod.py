@@ -46,7 +46,7 @@ A number of maintenance activities can be performed together (-all) or independe
 
 -navbox           Make sure the episode code is in the navbox, as determined from Module:Ep/Decoder
 
--maint_cat        Check if the article maintenance category has been created
+-cite_cat        Check if the article maintenance category has been created
 
 -4SD              For 4-Sided Dive only, add ep_id to the 3xNN episodes since the previous
 
@@ -191,7 +191,7 @@ class EpisodeBot(
         'ts': None, # YoutubeTranscript object
         'redirects': None,  # add/update redirects from ep_id to new_page_name
         'navbox': None,  # add ep_id to the appropriate navbox template
-        'maint_cat': None,  # create article maintenance category for episode code
+        'cite_cat': None,  # create article maintenance category for episode code
         '4SD': None,  # add 4SD param to 3xNN pages (4SD only)
     }
 
@@ -1309,7 +1309,7 @@ def main(*args: str) -> None:
     # handle which things to run if all is selected, and set to False any not yet defined
     for task in ['update_page', 'move', 'upload', 'ep_list', 'yt_switcher', 'ep_array',
                  'airdate_order', 'transcript', 'transcript_list', 'redirects',
-                 'navbox', '4SD', 'long_short', 'maint_cat']:
+                 'navbox', '4SD', 'long_short', 'cite_cat']:
         if options.get('all'):
             options[task] = True
         elif not options.get(task):
@@ -1484,7 +1484,7 @@ def main(*args: str) -> None:
             bot6 = NavboxBot(generator=gen, **options)
             bot6.treat_page()
 
-        if options.get('maint_cat'):
+        if options.get('cite_cat'):
             bot7 = CategoryBot(generator=gen, **options)
             bot7.treat_page()
 
