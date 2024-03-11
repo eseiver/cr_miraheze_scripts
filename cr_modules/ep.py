@@ -491,7 +491,7 @@ class Ep:
         '''For building a short description to prepend to article.
         Italics do not display in this view.'''
         shortdesc = ''
-        if self.show.title in ['Bits and bobs', 'Midst']:
+        if self.show.title in ['Bits and bobs']:
             return shortdesc
 
         if self.ce_words:

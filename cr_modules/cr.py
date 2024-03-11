@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+import mwparserfromhell
 import pywikibot
 
 from .ep import Ep, LuaReader, DATA_PATH

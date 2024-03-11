@@ -90,6 +90,10 @@ You will be prompted to enter a missing value if needed. No quotation marks need
 
 -image_name:      The name of the thumbnail image file to upload. Automatic and shouldn't be needed.
 
+-file_desc:       To override the automatically generated description for an uploaded image
+
+-caption:         To override the automatically generated caption for an episode thumbnail
+
 -summary:         A pywikibot command that adds an edit summary message and shouldn't be needed.
 
 -host:            Actor who is the 4SD host or running one-shot (DM, GM also work here)
@@ -171,6 +175,8 @@ class EpisodeBot(
         'update_page': None,  # update the contents of the episode page (may still need to access for info)
         'move': None,  # move page (only if new page name exists & is different from old one)
         'upload': None,  # upload the YouTube video thumbnail
+        'file_desc': None,  # manually created thumbnail file description
+        'caption': None,  # manually created infobox thumbnail caption
         'long_short': None, # check whether runtime is one of longest or shortest
         'ep_list': None,  # add to/update list of episodes
         'airdate_order': None,  # add to/update the airdate order
@@ -394,7 +400,10 @@ class EpisodeBot(
         if ((not infobox.has_param('caption')
             or not does_value_exist(infobox, param_name='caption'))
             and does_value_exist(infobox, param_name='image')):
-            infobox['caption'] = make_image_caption(actors=self.opt.actors, ep=ep)
+            if self.opt.get('caption'):
+                infobox['caption'] = self.opt['caption']
+            else:
+                infobox['caption'] = make_image_caption(actors=self.opt.actors, ep=ep)
 
         if not any([x.name.matches(ep.campaign.navbox) for x in wikicode.filter_templates()]):
             wikicode.append('\n' + f"{{{{{ep.campaign.navbox}}}}}")
@@ -1265,6 +1274,8 @@ def main(*args: str) -> None:
                 value = pywikibot.input(f'Please enter a value for {arg} (leave blank to ignore)')
             if value:
                 options[option] = value
+        elif value:
+            options[option] = value
         # take the remaining options as booleans.
         else:
             options[option] = True
@@ -1383,9 +1394,13 @@ def main(*args: str) -> None:
             options['upload'] = False
 
         if options.get('upload'):
-            description = make_image_file_description(ep=options['ep'],
-                                                      actors=options.get('actors'),
-                                                      )
+            if options.get('file_desc'):
+                description = options['file_desc']
+            else:
+                description = make_image_file_description(
+                    ep=options['ep'],
+                    actors=options.get('actors'),
+                    )
             summary = f"{options['ep'].code} episode thumbnail (uploaded via pywikibot)"
             if options.get('image_name'):
                 filename = options['image_name']
