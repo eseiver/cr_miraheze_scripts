@@ -525,18 +525,31 @@ def get_validated_input(regex, arg, value='', attempts=3, req=True,
     return value
 
 
-class pyPage(pywikibot.Page):
+class WikiPageParser:
+    """
+    A parser for extracting structured information from the content of a MediaWiki page.
 
-    @property
-    def wikicode(self):
-        if not hasattr(self, '_wikicode') or self._wikicode is None:
-            self._wikicode = mwparserfromhell.parse(self.text)
-        return self._wikicode
+    This class is designed to handle the entire content of a MediaWiki page, parsing
+    and providing access to specific elements such as infoboxes, headings, and the
+    table of contents (TOC).
+    """
+
+    def __init__(self, page_content):
+        """
+        Initialize the WikiPageParser with the text content of a MediaWiki page.
+
+        Parameters:
+        - page_content (str): The entire content of a MediaWiki page.
+        """
+        self.wikicode = mwparserfromhell.parse(page_content)
 
     @property
     def infobox(self):
         if not hasattr(self, '_infobox') or self._infobox is None:
-            self._infobox = next((x for x in self.wikicode.filter_templates() if 'infobox' in x.name.lower()), None)
+            self._infobox = next(
+                (x for x in self.wikicode.filter_templates()
+                 if 'infobox' in x.name.lower()),
+                None)
         return self._infobox
 
     @property
@@ -589,12 +602,37 @@ class pyPage(pywikibot.Page):
                 return section
         return ''
 
+class pyPage(pywikibot.Page):
+    def __init__(self, site, title):
+        super().__init__(site, title)
+        self._wiki_parser = WikiPageParser(self.text)
+
+    @property
+    def wiki_parser(self):
+        return self._wiki_parser
+
+    @property
+    def wikicode(self):
+        return self._wiki_parser.wikicode
+
+    @property
+    def infobox(self):
+        return self._wiki_parser.infobox
+
+    @property
+    def headings(self):
+        return self._wiki_parser.headings
+
+    @property
+    def toc(self):
+        return self._wiki_parser.toc
+
     @classmethod
     def create_from_xml_entry(cls, xml_entry, site=None):
         if site is None:
             site = pywikibot.Site()
         py_page = cls(site, xml_entry.title)
-        py_page._wikicode = mwparserfromhell.parse(xml_entry.text)
+        py_page._wiki_parser = WikiPageParser(xml_entry.text)
         return py_page
 
     @classmethod
@@ -621,8 +659,7 @@ class pyPage(pywikibot.Page):
 
         py_pages = []
         for xml_entry in xml_entries:
-            py_page = cls(site, xml_entry.title)
-            py_page._wikicode = mwparserfromhell.parse(xml_entry.text)
+            py_page = cls.create_from_xml_entry(xml_entry, site=site)
             # yield py_page
             py_pages.append(py_page)
 
