@@ -28,8 +28,8 @@ PODCAST_SWITCHER = 'Module:Ep/PodcastSwitcher/URLs'
 TRANSCRIPTS_LIST = 'Transcripts'
 
 # offline access
-DUMP_FILE = 'criticalrolewiki_xml_b5935788a5790a44aafa.xml.gz'
-DUMP_STRING = '12:56, January 28, 2024'
+DUMP_FILE = 'criticalrolewiki_xml_8e378347fe82a4bbb2de.xml.gz'
+DUMP_STRING = '17:43, March 11, 2024'
 DUMP_PATH = os.path.join(DATA_PATH, DUMP_FILE)
 DUMP_DATE = datetime.strptime(DUMP_STRING, '%H:%M, %B %d, %Y')
 LATEST_DUMP_FILE = 'latest_revisions_only.xml.gz'
