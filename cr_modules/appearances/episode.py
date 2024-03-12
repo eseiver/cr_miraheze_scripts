@@ -100,6 +100,20 @@ class pyEpisode(pyPage):
         return data
 
     @property
+    def yt(self):
+        self.pre_get()
+        yt = YT(self._yt_data.get(self.episode_code.code, ''))
+        return yt
+
+    @property
+    def yt_id(self):
+        return self.yt.yt_id
+
+    @property
+    def yt_link(self):
+        return self.yt.url
+
+    @property
     def campaign_pcs(self):
         return self.episode_code.campaign.main_characters
 
