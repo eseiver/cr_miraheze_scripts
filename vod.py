@@ -1508,7 +1508,7 @@ def main(*args: str) -> None:
                 bot10 = TranscriptBot(generator=gen, **options)
                 bot10.treat_page()
                 if bot10.opt.ts:
-                    options['ts'] = bot9.opt.ts
+                    options['ts'] = bot10.opt.ts
                 bot11 = TranscriptRedirectBot(generator=gen, **options)
                 bot11.treat_page()
 
