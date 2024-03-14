@@ -627,6 +627,9 @@ class pyPage(pywikibot.Page):
     def toc(self):
         return self._wiki_parser.toc
 
+    def get_section_by_heading(self, heading):
+        return self._wiki_parser.get_section_by_heading(heading)
+
     @classmethod
     def create_from_xml_entry(cls, xml_entry, site=None):
         if site is None:
