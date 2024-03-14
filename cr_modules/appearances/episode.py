@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 import mwparserfromhell
 from tqdm import tqdm
 
-from ..cr import pyPage, YT
+from ..cr import pyPage, YT, WikiPageParser
 from ..ep import EpisodeReader, Ep, LuaReader
 from .character import pyCharacter
 from .logger_config import logger 
@@ -130,6 +130,7 @@ class pyEpisode(pyPage):
             for ad in fcp.appearance_dict:
                 if not ad:
                     continue
+                ad['episode_code'] = self.episode_code
                 if ad['name'] in self.campaign_pcs:
                     ad['campaign_pc'] = True
                 else:
@@ -205,10 +206,10 @@ class FeaturedCharactersParser:
     def divide_characters(self):
         '''Use the table of contents to further subdivide characters w/keys of meaningful info.'''
         assert self.fc_section
-        fc_headings = pyPage.get_toc(self, wikicode=self.fc_section)
+        fc_headings = WikiPageParser.get_toc(self, wikicode=self.fc_section)
         divided_fc = {}
         for fc_heading in fc_headings:
-            section = pyPage.get_section_by_heading(self,
+            section = WikiPageParser.get_section_by_heading(self,
                                                     heading=fc_heading,
                                                     wikicode=self.fc_section)
             divided_fc[fc_heading] = section
@@ -326,6 +327,7 @@ class FeaturedCharactersParser:
         name_info.update({
             'has_linked_name': linked,
             'name_matched': None,
+            'heading': heading,
             'status': status,
             'modifiers': [],
         })
