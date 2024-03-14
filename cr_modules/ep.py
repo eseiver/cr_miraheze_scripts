@@ -399,18 +399,16 @@ class Ep:
     @property
     def season(self):
         if not hasattr(self, '_season') or self._season is None:
-            season = ''
-            season_number = re.search(r'\d+$', self.full_prefix).group()
-            if not season_number:
+            season_number_match = re.search(r'\d+$', self.full_prefix)
+            if season_number_match:
+                season_number = season_number_match.group()
+                season = (
+                    self.show.seasons.get(str(season_number),
+                                          Season(self.prefix, season_number, {}))
+                    if hasattr(self, 'show') and self.show and hasattr(self.show, 'seasons')
+                    and self.show.seasons else '')
+            else:
                 season = ''
-            elif (hasattr(self, 'show') and
-                self.show and hasattr(self.show, 'seasons')
-                and self.show.seasons):
-                # make sure can still infer season even if not in Decoder
-                season = self.show.seasons.get(str(season_number),
-                                               Season(self.prefix,
-                                                      season_number,
-                                                      {}))
             self._season = season
         return self._season
 
