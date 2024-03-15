@@ -65,8 +65,9 @@ def does_value_exist(infobox_obj, param_name):
     Removes whitespace and comments to see whether the value remaining is an empty string.'''
     has_param = infobox_obj.has_param(param_name)
     value = infobox_obj[param_name].value if has_param else ''
-    simplified_val = remove_comments(value).strip()
-    is_nonempty_val = bool(simplified_val)
+    if value:
+        simplified_val = remove_comments(value).strip()
+        is_nonempty_val = bool(simplified_val)
     return (has_param and value and is_nonempty_val)
 
 
@@ -191,7 +192,7 @@ def make_image_caption(ep: Ep, actors: Actors) -> str:
 
 def make_image_file_description(ep: Ep, actors: Actors) -> str:
     """The description of the image thumbnail file to be uploaded."""
-    actor_list = actors.name_string if actors.name_string else "the ''Critical Role'' cast"
+    actor_list = actors.name_string if actors and actors.name_string else "the ''Critical Role'' cast"
 
     file_description = f"""== Summary ==
 {ep.wiki_code} thumbnail featuring {actor_list}.

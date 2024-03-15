@@ -46,7 +46,7 @@ A number of maintenance activities can be performed together (-all) or independe
 
 -navbox           Make sure the episode code is in the navbox, as determined from Module:Ep/Decoder
 
--cite_cat        Check if the article maintenance category has been created
+-cite_cat         Check if the article maintenance category has been created
 
 -4SD              For 4-Sided Dive only, add ep_id to the 3xNN episodes since the previous
 
@@ -122,8 +122,6 @@ import mwparserfromhell
 import pywikibot
 from pywikibot import pagegenerators
 from pywikibot.bot import (
-    AutomaticTWSummaryBot,
-    ConfigParserBot,
     ExistingPageBot,
     SingleSiteBot,
     QuitKeyboardInterrupt,
@@ -140,9 +138,7 @@ MINISERIES = ['OS', 'E', 'CO']
 
 class EpisodeBot(
     SingleSiteBot,  # A bot only working on one site
-    ConfigParserBot,  # A bot which reads options from scripts.ini setting file
     ExistingPageBot,  # CurrentPageBot which only treats existing pages
-    AutomaticTWSummaryBot,  # Automatically defines summary; needs summary_key
 ):
     """
     :ivar summary_key: Edit summary message key. The message that should be
@@ -153,7 +149,6 @@ class EpisodeBot(
     """
 
     use_redirects = False  # treats non-redirects only
-    summary_key = 'basic-changing'
 
     update_options = {
         'summary': 'Updating newly-released episode page (via pywikibot)',
@@ -163,7 +158,7 @@ class EpisodeBot(
         'new_ep_name': None,  # the new official name of the episode
         'new_page_name': None,  # if different from episode title (usually 'A' vs 'A (episode)')
         'ep': None,  # Ep object
-        'image_name': None,  # unless specified, builds automatically from make_image_filename(ep_id)
+        'image_name': None,  # unless specified, builds automatically from Ep.image_filename
         'actors': None, # Actors object. list of actors in thumbnail image (optional)
         'host': None,  # the host (4SD) or GM (one-shot, defaults to Matt)
         'game_system': None,  # rules for gameplay (one-shot, defaults to Dungeons & Dragons)
@@ -319,7 +314,7 @@ class EpisodeBot(
                     shortdesc_value = 'none'
                 else:
                     shortdesc_value = ep.shortdesc_value
-                pywikibot.output(shortdesc_value)
+                pywikibot.output(f'\nSHORT DESCRIPTION: {shortdesc_value}')
                 answer = pywikibot.input("Hit enter to accept automatic short description or write your own:")
                 if answer:
                     shortdesc_value = answer
@@ -334,14 +329,12 @@ class EpisodeBot(
         # handle infobox
         infobox = self.get_infobox(wikicode=wikicode)
 
-        infobox['VOD'] = ep.wiki_vod
-        infobox['podcast'] = ep.wiki_podcast
         infobox['epCode'] = ep.code
 
         if self.opt.runtime and not does_value_exist(infobox, param_name='runtime'):
             infobox['runtime'] = ' ' + self.opt.runtime.lstrip()
-        # get the airdate & airtime so it can be used later, or prompt if infobox conflicts w/user entry
-        if infobox.has_param('airdate') and self.opt.airdate:
+        # prompt if infobox airdate conflicts w/user entry
+        if does_value_exist(infobox, 'airdate') and self.opt.airdate:
             if Airdate(infobox['airdate'].value.strip()).date == self.opt.airdate.date:
                 pass
             else:
@@ -354,8 +347,20 @@ class EpisodeBot(
                     infobox['airdate'] = new_airdate.date
                 else:
                     infobox['airdate'] = self.opt.airdate
-        elif infobox.has_param('airdate') and infobox['airdate'].value.strip() and not self.opt.airdate:
+        # get the airdate & airtime from infobox so it can be used later
+        elif does_value_exist(infobox, 'airdate') and not self.opt.airdate:
             self.opt.airdate = Airdate(infobox['airdate'].value.strip())
+        # add airdate to infobox if entered and not already there
+        elif self.opt.airdate and not does_value_exist(infobox, 'airdate'):
+            infobox['airdate'] = self.opt.airdate.date
+        # prompt for airdate if updating episode page, existing field is blank, and not already provided
+        elif (self.opt.update_page and
+              not infobox['airdate'].value.strip() and
+              infobox.has_param('airdate') and
+              not self.opt.airdate):
+            airdate_string = get_validated_input(arg='airdate', regex=DATE_REGEX)
+            self.opt.airdate = Airdate(airdate_string)
+            infobox['airdate'] = self.opt.airdate.date
         else:
             self.opt.airdate = ""
         if infobox.has_param('airtime') and infobox['airdate'].value.strip() and not self.opt.airtime:
@@ -1343,7 +1348,6 @@ def main(*args: str) -> None:
                 value = get_validated_input(arg='runtime', regex=r'\d{1,2}:\d{1,2}(:\d{1,2})?', input_msg="Please enter video runtime (HH:MM:SS or MM:SS)")
                 options['runtime'] = value
             elif req == 'ep':
-                test_ep = Ep('1x01')
                 value = get_validated_input(arg=req, value=value, regex=EP_REGEX)
                 options['ep'] = Ep(value)
 
@@ -1491,7 +1495,7 @@ def main(*args: str) -> None:
         if options.get('airdate_order'):
             bot8 = AirdateBot(generator=gen, **options)
             bot8.treat_page()
-            options['airdate_dict'] = bot7.opt.airdate_dict
+            options['airdate_dict'] = bot8.opt.airdate_dict
 
         if options['ep'].prefix == '4SD' and options.get('4SD'):
             bot9 = Connect4SDBot(generator=gen, **options)
