@@ -433,6 +433,12 @@ class Ep:
         return filename
 
     @property
+    def icon_filename(self):
+        '''For Midst only; .png files on midst.co'''
+        filename = f"{self.code} Episode Icon.png"
+        return filename
+
+    @property
     def wiki_code(self):
         wiki = f'{{{{ep|{self.code}}}}}'
         return wiki

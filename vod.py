@@ -50,6 +50,8 @@ A number of maintenance activities can be performed together (-all) or independe
 
 -4SD              For 4-Sided Dive only, add ep_id to the 3xNN episodes since the previous
 
+-appendix         For Midst only, interactively create [[Module:Midst appendices/Array]] entry
+
 Local data can be downloaded from various modules:
 
 -decoder          For forcing a re-download of Module:Ep/Decoder. Does not occur with -all
@@ -101,6 +103,16 @@ You will be prompted to enter a missing value if needed. No quotation marks need
 -host:            Actor who is the 4SD host or running one-shot (DM, GM also work here)
 
 -game_system:     For one-shots, game system if not Dungeons & Dragons
+
+-airsub:          For Midst, the earlier date the episode released to subscribers
+
+-transcript_link: For Midst, the url of the transcript
+
+-illustrator:     For Midst, the illustrator of the thumbnail/icon art
+
+-logline:         For Midst, the episode quote for the quotebox
+
+-icon_url:        For Midst, the url of the .png episode icon
 
 Other parameters (most of which are automatically calculated values but still can be passed in)
 can be found in `update_options` for EpisodeBot (line 107).
@@ -188,6 +200,12 @@ class EpisodeBot(
         'navbox': None,  # add ep_id to the appropriate navbox template
         'cite_cat': None,  # create article maintenance category for episode code
         '4SD': None,  # add 4SD param to 3xNN pages (4SD only)
+        'airsub': None,  # date episode released to subscribers (Midst only)
+        'transcript_link': None,  # external transcript link (Midst only)
+        'illustrator': None, #  name of thumbnail illustrator (Midst only)
+        'logline': None,  # add quotebox after infobox (Midst only)
+        'icon_url': None,  # direct url to icon image (Midst only)
+        'appendix': None,  # whether to prompt for appendix (Midst only)
     }
 
     @property
@@ -280,8 +298,102 @@ class EpisodeBot(
 
         return wikicode
 
+    def handle_infobox_image(self, infobox, param_name='image', image='thumbnail'):
+        # if image field is filled in with existing file, cancel thumbnail procedure
+        # otherwise, use image_name if entered
+        if image == 'thumbnail':
+            image_name = (self.opt.image_name
+                          if self.opt.get('image_name')
+                          else self.opt.ep.image_filename)
+        elif image == 'icon':
+            image_name = self.opt.ep.icon_filename
+        file = None
+        if infobox.has_param(param_name) and self.opt.upload:
+            image_value = (remove_comments(infobox[param_name].value)).strip()
+            if image_value and 'file' not in image_value.lower():
+                file_value = 'File:' + image_value
+            elif not image_value:
+                file_value = 'File:' + image_name
+            else:
+                file_value = image_value
+            file = pywikibot.Page(self.site, file_value)
+            if file.exists() and image_value and not self.opt.ep.prefix == "Midst":
+                pywikibot.output(f"Existing page '{file_value}' in {image} field; skipping image upload")
+                self.opt.upload = False
+            elif image_value and not image_name:
+                image_value = image_value.replace('File:', '')
+                self.opt.image_name = image_value
+            # if image already uploaded but not in param, add to infobox
+            if file.exists() and not image_value:
+                infobox[param_name] = image_name
+            if self.opt.upload and image_value and image_value != image_name:
+                pywikibot.output(
+                    f'Infobox image {image_value} does not match entered {image_name}. Please resolve and try again.')
+                sys.exit()
+        # don't offer to fill in field if upload not in procedure or file doesn't exist
+        if self.opt.image_name and not file:
+            file = pywikibot.Page(self.site, image_name)
+        if not self.opt.upload and (not file or not file.exists()):
+            pass
+        elif (image_name and
+              infobox.has_param('param_name') and
+              not does_value_exist(infobox, param_name)):
+            infobox[param_name] = ' ' + image_name.lstrip()
+
+        return infobox
+
+    def update_midst_infobox(self, infobox):
+        params_to_update = {
+        'image1_tab': 'Icon',
+        'image1': self.opt.ep.icon_filename,
+        'image1_caption': 'Icon by Third Person',
+        'image2_tab': 'Thumbnail',
+        'image2': self.opt.ep.image_filename,
+        'image2_caption': 'Thumbnail for the video version'
+    }
+
+        for param_name, default_value in params_to_update.items():
+            if not does_value_exist(infobox, param_name):
+                if not infobox.has_param(param_name):
+                    infobox.add(param_name, default_value, before='epCode')
+                else:
+                    infobox[param_name] = default_value
+
+        if infobox.has_param('image'):
+            infobox.remove('image')
+        if infobox.has_param('caption'):
+            infobox.remove('caption')
+
+        # subscriber airdate
+        if not does_value_exist(infobox, 'airsub'):
+            if self.opt.get('airsub'):
+                infobox['airsub'] = self.opt.airsub.date
+            else:
+                airsub_string = get_validated_input(arg='airsub', regex=DATE_REGEX)
+                airsub = Airdate(airsub_string)
+                self.opt.airsub = airsub
+                infobox['airsub'] = airsub.date
+        elif self.opt.airsub:
+            infobox_airsub = Airdate(infobox['airsub'].value.strip())
+            try:
+                assert self.opt.airsub.date == infobox_airsub.date
+            except AssertionError:
+                new_airsub_string = get_validated_input(arg='airsub', regex=DATE_REGEX, input_msg=f'Infobox airsub {infobox_airsub.date} does not match entered airsub {self.opt.airsub.date}. Enter airsub date (YYYY-MM-DD):')
+                new_airsub = Airdate(new_airsub_string)
+                infobox['airsub'] = new_airsub.date
+        else:
+            self.opt.airsub = Airdate(infobox['airsub'].value.strip())
+        try:
+            assert self.opt.airsub.date <= self.opt.airdate.date
+        except AssertionError:
+            print(f'\nAirdate for subscribers {self.opt.airsub.date} is after general airdate {self.opt.airdate.date}. Check dates and try again')
+            sys.exit()
+
+        return infobox
+
     def treat_page(self) -> None:
         """Load the episode page, change the relevant fields, save it, move it."""
+        # TO DO: split up into multiple functions for each type of update
         ep = self.opt.ep
 
         if not self.opt.old_ep_name:
@@ -373,45 +485,36 @@ class EpisodeBot(
         else:
             self.opt.airtime = ""
 
-        # if image field is filled in with existing file, cancel thumbnail procedure
-        # otherwise, use image_name if entered
-        file = None
-        if does_value_exist(infobox, param_name='image') and self.opt.upload:
-            image_value = (remove_comments(infobox['image'].value)).strip()
-            if image_value and 'file' not in image_value.lower():
-                file_value = 'File:' + image_value
-            else:
-                file_value = image_value
-            file = pywikibot.Page(self.site, file_value)
-            if file.exists():
-                pywikibot.output(f"Existing page '{file_value}' in image field; skipping thumbnail upload")
-                self.opt.upload = False
-            elif image_value and not self.opt.image_name:
-                image_value = image_value.replace('File:', '')
-                self.opt.image_name = image_value
-            if self.opt.upload and image_value and image_value != self.opt.image_name:
-                pywikibot.output(
-                    f'Infobox image {image_value} does not match entered {self.opt.image_name}. Please resolve and try again.')
-                sys.exit()
-        # don't offer to fill in field if upload not in procedure or file doesn't exist
-        if self.opt.image_name and not file:
-            file = pywikibot.Page(self.site, self.opt.image_name)
-        if not self.opt.upload and (not file or not file.exists()):
-            pass
-        elif (self.opt.image_name and
-            not does_value_exist(infobox, param_name='image')):
-            infobox['image'] = ' ' + self.opt.image_name.lstrip()
+        # Midst: add image fields, plus transcript link
+        if ep.prefix == 'Midst':
+            self.handle_infobox_image(infobox, param_name='image1', image='icon')
+            self.handle_infobox_image(infobox, param_name='image2', image='thumbnail')
+            self.update_midst_infobox(infobox)
+            if not does_value_exist(infobox, 'transcript'):
+                infobox['transcript'] = self.opt.transcript_link
+            if not does_value_exist(infobox, 'midst illustrator'):
+                infobox['midst illustrator'] = self.opt.illustrator
         else:
-            infobox['image'] = ' ' + ep.image_filename
+             infobox = self.handle_infobox_image(infobox)
+
 
         # only write caption if field not filled in or missing AND image field filled in
         if ((not infobox.has_param('caption')
             or not does_value_exist(infobox, param_name='caption'))
-            and does_value_exist(infobox, param_name='image')):
+            and does_value_exist(infobox, param_name='image')
+            and ep.prefix != 'Midst'):
             if self.opt.get('caption'):
                 infobox['caption'] = self.opt['caption']
             else:
                 infobox['caption'] = make_image_caption(actors=self.opt.actors, ep=ep)
+
+        # add logline for Midst if not there yet
+        if ep.prefix == 'Midst' and self.opt.get('logline'):
+            logline = Logline(self.opt['logline'])
+            if self.opt['logline'] not in wikicode:
+                wikicode.insert_after(infobox, logline.line)
+            else:
+                pywikibot.output(f'Logline already present for {ep.code}; skipping')
 
         if not any([x.name.matches(ep.campaign.navbox) for x in wikicode.filter_templates()]):
             wikicode.append('\n' + f"{{{{{ep.campaign.navbox}}}}}")
@@ -672,6 +775,9 @@ class EpListBot(EpisodeBot):
         if self.opt.ep.prefix == '4SD':
             wiki_code = ep.wiki_noshow
             transcript = ''
+        elif self.opt.ep.prefix == 'Midst':
+            wiki_code = ep.wiki_code
+            transcript = self.opt.transcript_link
         else:
             wiki_code = ep.wiki_code
             transcript = f'{{{{ep/Transcript|{ep.code}|style=unlinked}}}}'
@@ -1216,6 +1322,88 @@ class LongShortBot(EpisodeBot):
         return is_shortest
 
 
+class MidstAppendixBot(EpArrayBot):
+
+    def __init__(self, **kwargs):
+        self.available_options.update(**{
+            'm_id': None,
+            'm_date': None,
+            'm_prefix': None,
+            'm_quote': None,
+            'm_archive': None,
+            'm_ghostarchive': None,
+                })
+        super().__init__(**kwargs)
+
+    def make_array_dicts(self):
+        self.current_page = pywikibot.Page(self.site, MIDST_APPENDIX_ARRAY)
+        array_dicts = []
+        text = self.current_page.text
+
+        for x in re.finditer(MIDST_APPENDIX_REGEX, text):
+            y = x.groupdict()
+            array_dicts.append(y)
+        return array_dicts
+
+    def build_new_array_dict(self):
+        '''Creating values for the fields that would populate an appendix entry.'''
+        ep = self.opt.ep
+
+        array_dict = {
+            'epcode': ep.code,
+            'ID': self.opt.m_id,
+            'date': self.opt.m_date,
+            'prefix': self.opt.m_prefix,
+            'quote': self.opt.m_quote,
+            'archive': self.opt.m_archive,
+            'ghostarchive': self.opt.m_ghostarchive,
+                }
+        return array_dict
+
+    def treat_page(self):
+        self.current_page = pywikibot.Page(self.site, MIDST_APPENDIX_ARRAY)
+        text = self.current_page.text
+        ep = self.opt.ep
+
+        appendix_params = {
+        'm_id': None,
+        'm_date': None,
+        'm_prefix': None,
+        'm_quote': None,
+        'm_archive': None,
+        'm_ghostarchive': None,
+        }
+        self.available_options.update(appendix_params)
+
+        # Replace tabs with 4 spaces
+        text = text.replace('\t', '    ')
+
+        current_entry = next((x for x in re.split(r'\n\s+\},\n',
+                            text) if re.search(fr'\["{ep.code}"\]', x)),
+                            '')
+        if current_entry:
+            current_entry += '\n    },\n'
+            array_dicts = self.get_array_dicts()
+            current_dict = self.get_current_dict(array_dicts=array_dicts)
+        else:
+            current_dict = {}
+
+        new_dict = self.build_new_array_dict()
+        new_dict = self.update_new_dict(new_dict, current_dict)
+
+        new_entry = self.dict_to_entry(new_dict)
+
+        if current_entry:
+            text = text.replace(current_entry, new_entry)
+        else:
+            prev_entry = next((x for x in re.split(r'\n\s+\},\n',
+                                                   text) if re.search(fr'\["{ep.get_previous_episode().code}"\]', x)),
+                              '') + '\n    },\n'
+            text = text.replace(prev_entry, '\n'.join([prev_entry, new_entry]))
+
+        self.put_current(text, summary=f"Updating {ep.code} appendix (via pywikibot)")
+
+
 def main(*args: str) -> None:
     """
     Process command line arguments and invoke bot.
@@ -1286,12 +1474,12 @@ def main(*args: str) -> None:
                 options[option] = Actors(value, actor_data=ACTOR_DATA)
             elif option == 'host':
                 options[option] = Actors(value, link=False, actor_data=ACTOR_DATA)
-        elif option == 'airdate':
+        elif option in ['airdate', 'airsub']:
             if re.search(DATE_2_REGEX, value):
                 pass
             else:
                 value = get_validated_input(arg=option, value=value, regex=DATE_REGEX)
-            options['airdate'] = Airdate(value)
+            options[option] = Airdate(value)
         elif option == 'airtime':
             options['airtime'] = Airdate(value)
         elif option in (
@@ -1341,7 +1529,9 @@ def main(*args: str) -> None:
                     options[req] = value
                 else:
                     options[req] = options['old_ep_name']
-            elif req == 'actors' and any([options.get(x) for x in ['update_page', 'upload']]):
+            elif (req == 'actors' and
+                  any([options.get(x) for x in ['update_page', 'upload']]) and
+                  options.get('ep').prefix != 'Midst'):
                 value = pywikibot.input(f"Optional: L-R actor order in {options['ep']} thumbnail (first names ok)")
                 options[req] = Actors(value, actor_data=ACTOR_DATA)
             elif req == 'runtime' and any([options.get(x) for x in ['update_page', 'ep_list', 'long_short']]):
@@ -1376,6 +1566,21 @@ def main(*args: str) -> None:
         if not game_system.strip():
             game_system = 'Dungeons & Dragons'
         options['game_system'] = game_system
+
+    # if Midst, prompt for optional logline icon url, illsutrator, transcript_link
+    if options['ep'].prefix == 'Midst':
+        if not options.get('transcript_link'):
+            transcript_link = pywikibot.input('Enter Midst transcript link (optional)')
+            options['transcript_link'] = transcript_link
+        if not options.get('logline'):
+            logline = pywikibot.input('Enter one-sentence Midst logline for quotebox (optional)')
+            options['logline'] = logline
+        if not options.get('icon_url'):
+            icon_url = pywikibot.input('Enter url of Midst icon .png (optional)')
+            options['icon_url'] = icon_url
+        if not options.get('illustrator'):
+            illustrator = pywikibot.input('Enter Midst illustrator name (optional)')
+            options['illustrator'] = illustrator
 
     # The preloading option is responsible for downloading multiple
     # pages from the wiki simultaneously.
@@ -1421,6 +1626,14 @@ def main(*args: str) -> None:
         if options.get('upload'):
             if options.get('file_desc'):
                 description = options['file_desc']
+            elif options['ep'].prefix == 'Midst':
+                description = f'''== Summary ==
+{{{{ep|{options['ep'].code}}}}} thumbnail from the [https://youtu.be/{options['yt'].yt_id} YouTube video].
+
+== Licensing ==
+{{{{Fairuse}}}}
+
+[[Category:Midst episode thumbnails]]'''
             else:
                 description = make_image_file_description(
                     ep=options['ep'],
@@ -1458,6 +1671,35 @@ def main(*args: str) -> None:
             else:
                 pywikibot.output('High-res and backup YouTube thumbnail not found. Check if YouTube ID is correct.')
 
+            if options['ep'].prefix == 'Midst':
+                description = f'''{{{{caption|nointro=true|Episode icon for {{{{ep|{options['ep'].code}}}}}|Third Person|https://midst.co/episodes/}}}}
+{{{{fairuse}}}}
+[[Category:Midst episode icons]]'''
+                summary = f"{options['ep'].code} icon (uploaded via pywikibot)"
+                pywikibot.output(f"\n{description}\n")
+                keep = pywikibot.input_yn("Do you want to use this default Midst icon description?")
+                if not keep:
+                    from pywikibot import editor as editarticle
+                    editor = editarticle.TextEditor()
+                    try:
+                        new_description = editor.edit(description)
+                        description = new_description
+                        pywikibot.output(f"\n<<yellow>>New description:<<default>>\n\n{description}\n")
+                    except ImportError:
+                        raise
+                    except Exception as e:
+                        pywikibot.error(e)
+                if options.get('icon_url'):
+                    icon_bot = UploadRobot(
+                    generator=gen,
+                    url=options['icon_url'],
+                    description=description,
+                    use_filename=options['ep'].icon_filename,
+                    summary=summary,
+                    verify_description=False,
+                )
+                    icon_bot.run()
+
         if options.get('ep_array'):
             bot2 = EpArrayBot(generator=gen, **options)
             bot2.treat_page()
@@ -1492,7 +1734,7 @@ def main(*args: str) -> None:
             bot7 = CategoryBot(generator=gen, **options)
             bot7.treat_page()
 
-        if options.get('airdate_order'):
+        if options.get('airdate_order') and options['ep'].prefix != 'Midst':
             bot8 = AirdateBot(generator=gen, **options)
             bot8.treat_page()
             options['airdate_dict'] = bot8.opt.airdate_dict
@@ -1541,11 +1783,34 @@ def main(*args: str) -> None:
                 bot13.treat_page()
 
         if options.get('long_short'):
-            if options['ep'].prefix == '4SD':
+            if options['ep'].prefix in ['4SD', 'Midst']:
                 pywikibot.output(f'\nSkipping longest/shortest for {options["ep"].show.title} episode')
             else:
                 bot14 = LongShortBot(generator=gen, **options)
                 bot14.treat_page()
+
+        if options['ep'].prefix == 'Midst':
+            app = options.get('appendix')
+            if not app:
+                app = pywikibot.input_yn('Create an entry for the Midst appendix?')
+            if app:
+                pywikibot.output('\nEnter Midst entry values below')
+                m_id = pywikibot.input('ID')
+                m_date = get_validated_input(arg='date', regex=DATE_REGEX)
+                m_prefix = pywikibot.input('Prefix')
+                m_quote = pywikibot.input('Quote')
+                m_archive = pywikibot.input('Archive')
+                m_ghostarchive = pywikibot.input('Ghostarchive')
+                m_params = {
+                    'm_id': m_id,
+                    'm_date': m_date,
+                    'm_prefix': m_prefix,
+                    'm_quote': m_quote,
+                    'm_archive': m_archive,
+                    'm_ghostarchive': m_ghostarchive,
+                }
+                bot15 = MidstAppendixBot(generator=gen, **options, **m_params)
+                bot15.treat_page()
 
 
 if __name__ == '__main__':

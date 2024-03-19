@@ -18,6 +18,7 @@ ARRAY_ENTRY_REGEX = r'''\[\"(?P<epcode>.*?)\"\] = \{\s*\[\"title\"\] = \"(?P<tit
 YT_LINK_REGEX = r'(?P<vod>(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))(?P<yt_id>[-\w_]{11})(&t=(?P<timecode>.*))?)'
 YT_ID_REGEX = r'[-\w_]{11}'
 LONG_SHORT_REGEX = r"\|\s*(?P<num>\d+)\s*\|\|.*?\{\{ep\|(?P<ep_code>.*?)(\|.*?)?\}\}.*?\|\| (?P<timecode>(\d+:\d+){2,3})"
+MIDST_APPENDIX_REGEX = r'''\[\"(?P<epcode>.*?)\"\] = \{\s*\[\"ID\"\] = \"(?P<ID>.*)\",?((\s*\[\"date\"\] = \"(?P<date>.*)\",)?(\s*\[\"prefix\"\] = \"(?P<prefix>.*)\",)?)?(\s*\[\"quote\"\] = \"(?P<quote>.*)\",)?(\s*\[\"archive\"\] = \"(?P<archive>.*)\",)?(\s*\[\"ghostarchive\"\] = \"(?P<ghostarchive>.*)\")?'''
 
 # pagenames
 INFOBOX_EPISODE = 'Infobox Episode'
@@ -26,6 +27,7 @@ AIRDATE_ORDER = 'Module:AirdateOrder/Array'
 YT_SWITCHER = 'Module:Ep/YTURLSwitcher/URLs'
 PODCAST_SWITCHER = 'Module:Ep/PodcastSwitcher/URLs'
 TRANSCRIPTS_LIST = 'Transcripts'
+MIDST_APPENDIX_ARRAY = 'Module:Midst appendices/Array'
 
 # offline access
 DUMP_FILE = 'criticalrolewiki_xml_8e378347fe82a4bbb2de.xml.gz'
@@ -392,6 +394,27 @@ class Runtime:
         return hash((self.timecode))
 
 
+class Logline:
+    '''For Midst, create a logline quotebox for the top of the article.'''
+    def __init__(self, text):
+        if isinstance(text, str):
+            self.line = ''.join([
+                f'''\n{{{{Quotebox|class=header|quote={text}|''',
+                'source=Official logline<ref>[https://midst.co/episodes/ Episodes] '
+                'at the official ''Midst'' website.</ref>}}'])
+        else:
+            raise ValueError('Logline text must be a string')
+
+    @property
+    def wikicode(self):
+        # TO DO: make wikicode object version
+        template = mwparserfromhell.nodes.Template('Quotebox')
+        pass
+
+    def __repr__(self):
+        return self.line
+
+
 def remove_comments(wikicode, return_string=True):
     '''For an item of wikicode, strip out comments. Used to determine if an infobox value
     is truly empty.'''
@@ -440,6 +463,8 @@ def get_validated_input(regex, arg, value='', attempts=3, req=True,
         input_msg = 'Please enter valid episode id (CxNN)'
     elif arg == 'airdate' and input_msg is None:
         input_msg = 'Please enter valid airdate (YYYY-MM-DD)'
+    elif arg == 'airsub' and input_msg is None:
+        input_msg = 'Please enter valid subscriber airdate (YYYY-MM-DD)'
     elif input_msg is None:
         input_msg = f'Please enter valid {arg}'
     while counter < attempts and not re.match(regex, value, flags=re.IGNORECASE):
