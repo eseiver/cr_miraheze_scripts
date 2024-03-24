@@ -709,7 +709,6 @@ class EpArrayBot(EpisodeBot):
             current_dict = {}
 
         new_dict = self.build_new_array_dict()
-        new_dict = self.update_new_dict(new_dict, current_dict)
 
         # Make sure that for relevant episode codes it is also the latest
         latest = ep.campaign.latest
@@ -1365,15 +1364,15 @@ class MidstAppendixBot(EpArrayBot):
         text = self.current_page.text
         ep = self.opt.ep
 
-        appendix_params = {
-        'm_id': None,
-        'm_date': None,
-        'm_prefix': None,
-        'm_quote': None,
-        'm_archive': None,
-        'm_ghostarchive': None,
-        }
-        self.available_options.update(appendix_params)
+        # appendix_params = {
+        # 'm_id': None,
+        # 'm_date': None,
+        # 'm_prefix': None,
+        # 'm_quote': None,
+        # 'm_archive': None,
+        # 'm_ghostarchive': None,
+        # }
+        # self.available_options.update(appendix_params)
 
         # Replace tabs with 4 spaces
         text = text.replace('\t', '    ')
