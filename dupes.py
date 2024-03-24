@@ -132,7 +132,7 @@ class DupeDetectionBot(SingleSiteBot, ExistingPageBot):
         new_ts = DuplicateProcessor().process_duplicates(self.opt.ts, language=language)
         # remove maintenance category if all duplicates removed
         transcript = new_ts.transcript_dict[language]
-        if 'DUPLICATE' not in transcript:
+        if '<!-- DUPLICATE' not in transcript:
             new_ts.transcript_dict[language] = (transcript
                                  .replace('[[Category:Transcripts with duplicate lines]]',
                                           '')
