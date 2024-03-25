@@ -317,14 +317,14 @@ class EpisodeBot(
             else:
                 file_value = image_value
             file = pywikibot.Page(self.site, file_value)
-            if file.exists() and image_value and not self.opt.ep.prefix == "Midst":
+            if file.exists() and image_value and self.opt.ep.prefix != "Midst":
                 pywikibot.output(f"Existing page '{file_value}' in {image} field; skipping image upload")
                 self.opt.upload = False
             elif image_value and not image_name:
                 image_value = image_value.replace('File:', '')
                 self.opt.image_name = image_value
-            # if image already uploaded but not in param, add to infobox
-            if file.exists() and not image_value:
+            # if image already (or to be) uploaded but not in param, add to infobox
+            if not image_value:
                 infobox[param_name] = image_name
             if self.opt.upload and image_value and image_value != image_name:
                 pywikibot.output(
@@ -709,6 +709,7 @@ class EpArrayBot(EpisodeBot):
             current_dict = {}
 
         new_dict = self.build_new_array_dict()
+        new_dict = self.update_new_dict(new_dict, current_dict)
 
         # Make sure that for relevant episode codes it is also the latest
         latest = ep.campaign.latest
@@ -1388,7 +1389,6 @@ class MidstAppendixBot(EpArrayBot):
             current_dict = {}
 
         new_dict = self.build_new_array_dict()
-        new_dict = self.update_new_dict(new_dict, current_dict)
 
         new_entry = self.dict_to_entry(new_dict)
 
