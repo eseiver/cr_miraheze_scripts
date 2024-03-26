@@ -603,8 +603,8 @@ class WikiPageParser:
         return ''
 
 class pyPage(pywikibot.Page):
-    def __init__(self, site, title):
-        super().__init__(site, title)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._wiki_parser = WikiPageParser(self.text)
 
     @property
