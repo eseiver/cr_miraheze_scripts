@@ -1672,33 +1672,38 @@ def main(*args: str) -> None:
                 pywikibot.output('High-res and backup YouTube thumbnail not found. Check if YouTube ID is correct.')
 
             if options['ep'].prefix == 'Midst':
-                description = f'''{{{{caption|nointro=true|Episode icon for {{{{ep|{options['ep'].code}}}}}|Third Person|https://midst.co/episodes/}}}}
+                file_value = f"File:{options['ep'].icon_filename}"
+                file = pywikibot.Page(bot1.site, file_value)
+                if file.exists():
+                    pywikibot.output('Skipping Midst icon creation (file already exists)')
+                else:
+                    description = f'''{{{{caption|nointro=true|Episode icon for {{{{ep|{options['ep'].code}}}}}|Third Person|https://midst.co/episodes/}}}}
 {{{{fairuse}}}}
 [[Category:Midst episode icons]]'''
-                summary = f"{options['ep'].code} icon (uploaded via pywikibot)"
-                pywikibot.output(f"\n{description}\n")
-                keep = pywikibot.input_yn("Do you want to use this default Midst icon description?")
-                if not keep:
-                    from pywikibot import editor as editarticle
-                    editor = editarticle.TextEditor()
-                    try:
-                        new_description = editor.edit(description)
-                        description = new_description
-                        pywikibot.output(f"\n<<yellow>>New description:<<default>>\n\n{description}\n")
-                    except ImportError:
-                        raise
-                    except Exception as e:
-                        pywikibot.error(e)
-                if options.get('icon_url'):
-                    icon_bot = UploadRobot(
-                    generator=gen,
-                    url=options['icon_url'],
-                    description=description,
-                    use_filename=options['ep'].icon_filename,
-                    summary=summary,
-                    verify_description=False,
-                )
-                    icon_bot.run()
+                    summary = f"{options['ep'].code} icon (uploaded via pywikibot)"
+                    pywikibot.output(f"\n{description}\n")
+                    keep = pywikibot.input_yn("Do you want to use this default Midst icon description?")
+                    if not keep:
+                        from pywikibot import editor as editarticle
+                        editor = editarticle.TextEditor()
+                        try:
+                            new_description = editor.edit(description)
+                            description = new_description
+                            pywikibot.output(f"\n<<yellow>>New description:<<default>>\n\n{description}\n")
+                        except ImportError:
+                            raise
+                        except Exception as e:
+                            pywikibot.error(e)
+                    if options.get('icon_url'):
+                        icon_bot = UploadRobot(
+                        generator=gen,
+                        url=options['icon_url'],
+                        description=description,
+                        use_filename=options['ep'].icon_filename,
+                        summary=summary,
+                        verify_description=False,
+                    )
+                        icon_bot.run()
 
         if options.get('ep_array'):
             bot2 = EpArrayBot(generator=gen, **options)
