@@ -769,15 +769,16 @@ class EpListBot(EpisodeBot):
         if num is None:
             num = str(ep.number)
         if self.opt.host:
-            host = self.opt.host.make_actor_list_string()
+            aux1 = self.opt.host.make_actor_list_string()
         else:
-            host = ''
+            aux1 = ''
         if self.opt.ep.prefix == '4SD':
             wiki_code = ep.wiki_noshow
             transcript = ''
         elif self.opt.ep.prefix == 'Midst':
             wiki_code = ep.wiki_code
             transcript = self.opt.transcript_link
+            aux1 = self.opt.illustrator
         else:
             wiki_code = ep.wiki_code
             transcript = f'{{{{ep/Transcript|{ep.code}|style=unlinked}}}}'
@@ -792,7 +793,7 @@ class EpListBot(EpisodeBot):
             'VOD': ep.wiki_vod,
             'transcript': transcript,
             'runtime': self.opt.runtime,
-            'aux1': host,
+            'aux1': aux1,
             'aux2': game_system,
             'summary': self.opt.episode_summary,
         }
