@@ -402,6 +402,12 @@ class Ep:
     def __init__(self, episode_code, padding_limit=2, ep_regex=None, suppress_warnings=False):
         episode_code = episode_code.strip()
 
+        # handle C(Campaign)E(Number) (CNENN) format
+        ce_regex = r'C(?P<campaign>\d+)E(?P<number>\d+)'
+        match = re.match(ce_regex, episode_code)
+        if match:
+            episode_code = f"{match['campaign']}x{match['number']}"
+
         if not ep_regex:
             self.ep_regex = EP_REGEX
         else:
