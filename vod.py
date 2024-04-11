@@ -1234,7 +1234,7 @@ class Connect4SDBot(AirdateBot, EpArrayBot):
         infobox = self.get_infobox(wikicode=wikicode)
         if not infobox.has_param('4SD') or not does_value_exist(infobox, param_name='4SD'):
             infobox.add('4SD', ep.wiki_noshow, showkey=None,
-                         before='podcast', preserve_spacing=True)
+                         before='prevEp', preserve_spacing=True)
         self.put_current(str(wikicode), summary="Adding 4SD to infobox (via pywikibot)")
 
     def treat_page(self):
