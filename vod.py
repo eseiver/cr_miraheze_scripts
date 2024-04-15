@@ -739,24 +739,31 @@ class YTSwitcherBot(EpisodeBot):
         yt = self.opt.yt
         prev_ep = ep.get_previous_episode()
 
+        # Pattern to match ep code and its video array
+        pattern = fr'\["{ep.code}"\]\s*=\s*\{{.*?\}},'
+
         # if it already exists as an entry, substitute in yt_link
         if ep.code in text:
-            text = re.sub(fr'["{ep.code}"]\s*=.*', fr'["{ep.code}"] = "{yt.url}",', text)
+            text = re.sub(pattern,
+                          fr'''["{ep.code}"] = {"{"}"{yt.url}"{"}"},''',
+                          text,
+                          flags=re.DOTALL)
 
         # if previous episode is already there, append after it
-        elif prev_ep and prev_ep.code in text:
-            prev_entry = next(x for x in text.splitlines()
-                if any([y in x for y in prev_ep.generate_equivalent_codes()]))
-            new_entry = f'    ["{ep.code}"]  = "{yt.url}",'
-            text = text.replace(prev_entry,
-                                '\n'.join([prev_entry, new_entry])
-                                )
+        elif prev_ep and re.search(fr'''\["{prev_ep.code}"\]\s*=\s*\{{.*?\}},''', text):
+            prev_entry = re.search(fr'''\["{prev_ep.code}"\]\s*=\s*\{{.*?\}},''', text).group()
+            new_entry = f'''    ["{ep.code}"]  = {"{"}"{yt.url}"{"}"},'''
+            text = text.replace(prev_entry, '\n'.join([prev_entry, new_entry]))
+
         # otherwise, append episode to the end of the list
         else:
-            text = text.replace('["default"] = ""',
-                                f'["{ep.code}"]  = "{yt.url}",\n    ["default"] = ""')
+            text = text.replace(
+                '["default"] = ""',
+                f'["{ep.code}"]  = {"{"}"{yt.url}"{"}"},\n    ["default"] = {""}'
+                )
 
         self.put_current(text, summary=f"Adding youtube link for {ep.code} (via pywikibot)")
+
 
 
 class EpListBot(EpisodeBot):
