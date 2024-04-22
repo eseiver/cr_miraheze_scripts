@@ -26,6 +26,8 @@ DURING_BREAK_PHRASES = [
     "chop it off. let's do it.", '(gale laughing) later, chudruckers!'
 ]
 
+BREAK_BEGINS = '\n\n<!-- BREAK BEGINS\n'
+
 DEFAULT_LANGUAGE = 'en'
 
 actor_data = ActorData()
@@ -100,12 +102,12 @@ class Breakfinder:
         try:
             assert self.revised_transcript == self.transcript or 'BREAK ENDS' in self.revised_transcript, 'End of break not detected'
         except AssertionError as e:
+            pywikibot.output(f'Break not detected for {self.ep.code} transcript')
             if self.ep.prefix in ['M'] and self.transcript != self.revised_transcript:
                 self.revised_transcript = self.transcript  # Discard the revised version, assume has no break
-                pywikibot.output(f'Break not detected for {self.ep.code} transcript')
             else:
                 # important that there is not a hanging beginning of comment without the end
-                raise e
+                self.revised_transcript = self.revised_transcript.replace(BREAK_BEGINS, '')
 
     def find_break(self, break_function=None):
         if self.break_found:
@@ -126,7 +128,7 @@ class Breakfinder:
             if break_function(line, break_taken, during_break):
                 during_break = True
                 old_first_line = line
-                new_first_line = old_first_line + '\n\n<!-- BREAK BEGINS\n'
+                new_first_line = old_first_line + BREAK_BEGINS
                 self.break_found = True
                 continue
             elif (during_break and line.startswith('MATT:')

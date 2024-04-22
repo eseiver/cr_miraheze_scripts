@@ -38,6 +38,8 @@ A number of maintenance activities can be performed together (-all) or independe
 
 -transcript_list  Add transcript page to list of transcripts (auto-skips TRANSCRIPT_EXCLUSIONS)
 
+-ignore_break     To manually override break checking for campaign episodes
+
 -upload           Upload and link to the episode thumbnail; ignored if already exists
 
 -long_short       Check whether the runtime for the episode is one of the longest or shortest
@@ -192,6 +194,7 @@ class EpisodeBot(
         'yt_switcher': None,  # add to/update the yt url switcher
         'ep_array': None,  # add to/update the ep array
         'transcript': None,  # create episode transcript pages (auto-skips TRANSCRIPT_EXCLUSIONS)
+        'ignore_break': None,  # Don't run BreakFinder when generating the transcript
         'no_translations': None,  # only create English transcript (auto-skips TRANSCRIPT_EXCLUSIONS)
         'transcript_list': None,  # add transcript page to list of transcripts (auto-skips TRANSCRIPT_EXCLUSIONS)
         'TRANSCRIPT_EXCLUSIONS': None, # calculated from Decoder. CxNN prefixes with no transcripts
@@ -905,7 +908,13 @@ class TranscriptBot(EpisodeBot):
         if no_translations is None:
             no_translations = self.opt.no_translations
         assert no_translations is not None
-        ts = YoutubeTranscript(ep=self.opt.ep, yt=self.opt.yt, actor_data=ACTOR_DATA)
+
+        if self.opt.ignore_break:
+            ts = YoutubeTranscript(ep=self.opt.ep, yt=self.opt.yt,
+                                   actor_data=ACTOR_DATA, ignore_break=True)
+        else:
+            ts = YoutubeTranscript(ep=self.opt.ep, yt=self.opt.yt,
+                                   actor_data=ACTOR_DATA)
         if no_translations:
             ts.download_and_build_transcript()
         else:
