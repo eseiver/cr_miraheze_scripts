@@ -79,6 +79,12 @@ class EpisodeReader(LuaReader):
             self._conversion_dict = self.build_conversion_dict()
         return self._conversion_dict
 
+    @property
+    def episode_list(self):
+        if not hasattr(self, '_episode_list') or self._episode_list is None:
+            self._episode_list = self.build_episode_list()
+        return self._episode_list
+
     def build_conversion_dict(self):
         new_dict = {}
         for k, v in self._json.items():
@@ -97,6 +103,19 @@ class EpisodeReader(LuaReader):
                     'episode_code': k,
                 }
         return new_dict
+
+    def build_episode_list(self):
+        episode_list = sorted(
+            [
+                {
+                    'ep': Ep(k),
+                    **{x: v[x] for x in ['title', 'pagename']}
+                }
+                for k, v in self._json.items()
+            ],
+            key=lambda d: d['ep'].code
+        )
+        return episode_list
 
     def get_ep_dict(self, value):
         # first try calling ep directly:
@@ -486,6 +505,15 @@ class Ep:
         '''For creating the written-out version of self.ce_codes.'''
         if self.is_campaign:
             words = f'Campaign {self.prefix} Episode {self.number}'
+        else:
+            words = ''
+        return words
+
+    @property
+    def ce_words_comma(self):
+        '''Written-out version of self.ce_codes including commas.'''
+        if self.is_campaign:
+            words = f'Campaign {self.prefix}, Episode {self.number}'
         else:
             words = ''
         return words

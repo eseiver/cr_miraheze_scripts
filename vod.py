@@ -1012,7 +1012,7 @@ class RedirectFixerBot(EpisodeBot):
 
     def treat_page(self):
         ep = self.opt.ep
-        all_codes = ep.generate_equivalent_codes() + ep.ce_codes
+        all_codes = ep.generate_equivalent_codes() + ep.ce_codes + ep.ce_codes_comma
         for code in all_codes:
             self.current_page = pywikibot.Page(self.site, code)
             text = f"#REDIRECT [[{self.opt.new_page_name}]]\n[[Category:Episode code redirects]]"
