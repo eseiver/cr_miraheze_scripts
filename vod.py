@@ -1121,8 +1121,7 @@ class CategoryBot(EpisodeBot):
         campaign_category = f'[[Category:Articles needing {ep.show.title} citations]]'
 
         self.current_page = pywikibot.Page(self.site, category_name)
-        text = '\n'.join('[[Category:Articles needing citations]]',
-                         campaign_category,
+        text = '\n'.join(campaign_category,
                          '__HIDDENCAT__')
         if not self.current_page.exists():
             self.put_current(
