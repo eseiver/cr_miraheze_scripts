@@ -1012,7 +1012,7 @@ class RedirectFixerBot(EpisodeBot):
 
     def treat_page(self):
         ep = self.opt.ep
-        all_codes = ep.generate_equivalent_codes() + ep.ce_codes + ep.ce_codes_comma
+        all_codes = ep.generate_equivalent_codes() + ep.ce_codes + [ep.ce_words, ep.ce_words_comma]
         for code in all_codes:
             self.current_page = pywikibot.Page(self.site, code)
             text = f"#REDIRECT [[{self.opt.new_page_name}]]\n[[Category:Episode code redirects]]"
@@ -1121,8 +1121,8 @@ class CategoryBot(EpisodeBot):
         campaign_category = f'[[Category:Articles needing {ep.show.title} citations]]'
 
         self.current_page = pywikibot.Page(self.site, category_name)
-        text = '\n'.join(campaign_category,
-                         '__HIDDENCAT__')
+        text = '\n'.join([campaign_category,
+                         '__HIDDENCAT__'])
         if not self.current_page.exists():
             self.put_current(
                 text,
