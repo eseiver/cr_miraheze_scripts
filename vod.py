@@ -761,8 +761,8 @@ class YTSwitcherBot(EpisodeBot):
         # otherwise, append episode to the end of the list
         else:
             text = text.replace(
-                '["default"] = ""',
-                f'["{ep.code}"]  = {"{"}"{yt.url}"{"}"},\n    ["default"] = {""}'
+                '["default"] = {""}',
+                f'["{ep.code}"]  = {"{"}"{yt.url}"{"}"},\n    ["default"] = {{""}}'
                 )
 
         self.put_current(text, summary=f"Adding youtube link for {ep.code} (via pywikibot)")
