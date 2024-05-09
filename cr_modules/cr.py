@@ -354,36 +354,46 @@ class Runtime:
     def __repr__(self):
         return str(self.timecode)
 
+    def __add__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return Runtime(self.timecode + other.timecode)
+
+    def __sub__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return Runtime(self.timecode - other.timecode)
+
     def __eq__(self, other): 
-        if not isinstance(other, Runtime):
+        if not isinstance(other, self.__class__):
             # don't attempt to compare against unrelated types
             return False
 
         return self.timecode == other.timecode
 
     def __lt__(self, other): 
-        if not isinstance(other, Runtime):
+        if not isinstance(other, self.__class__):
             # don't attempt to compare against unrelated types
             return False
 
         return self.timecode < other.timecode
 
     def __le__(self, other): 
-        if not isinstance(other, Runtime):
+        if not isinstance(other, self.__class__):
             # don't attempt to compare against unrelated types
             return False
 
         return self.timecode <= other.timecode
 
     def __gt__(self, other): 
-        if not isinstance(other, Runtime):
+        if not isinstance(other, self.__class__):
             # don't attempt to compare against unrelated types
             return False
 
         return self.timecode > other.timecode
 
     def __ge__(self, other): 
-        if not isinstance(other, Runtime):
+        if not isinstance(other, self.__class__):
             # don't attempt to compare against unrelated types
             return False
 
