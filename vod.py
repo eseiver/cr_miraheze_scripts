@@ -345,6 +345,30 @@ class EpisodeBot(
 
         return infobox
 
+    def update_4SD_infobox(self, infobox):
+        params_to_update = {
+        'image1_tab': 'Main',
+        'image1': self.opt.ep.image_filename,
+        'image1_caption': f'{{{{art official caption|nointro=true|subject=Thumbnail|screenshot=1|source={self.opt.ep.wiki_nolink}}}}}',
+        'image2_tab': 'Game',
+        'image2': self.opt.ep.game_filename,
+        'image2_caption': 'Thumbnail for the C-block game portion, entitled More-Sided Dive.'
+    }
+
+        for param_name, default_value in params_to_update.items():
+            if not does_value_exist(infobox, param_name):
+                if not infobox.has_param(param_name):
+                    infobox.add(param_name, default_value, before='epCode')
+                else:
+                    infobox[param_name] = default_value
+
+        if infobox.has_param('image'):
+            infobox.remove('image')
+        if infobox.has_param('caption'):
+            infobox.remove('caption')
+
+        return infobox
+
     def update_midst_infobox(self, infobox):
         params_to_update = {
         'image1_tab': 'Icon',
@@ -447,7 +471,19 @@ class EpisodeBot(
         infobox['epCode'] = ep.code
 
         if self.opt.runtime and not does_value_exist(infobox, param_name='runtime'):
-            infobox['runtime'] = ' ' + self.opt.runtime.lstrip()
+            # add all runtimes together
+            total_runtime = str(sum(self.opt.runtime, timedelta()))
+            if ep.prefix == '4SD' and len(self.opt.runtime) == 2:
+                # footnote explaining runtime addition for 4SD 2-parters
+                runtime_footnote = ''.join([
+                    '''{{fn|This episode was uploaded in two parts. ''',
+                    '''The first, which covered the question portions, was uploaded as 4-Sided Dive ''',
+                    f'''and ran for {str(self.opt.runtime[0])}. ''',
+                    '''The second, which covered the game portion, was uploaded as More-Sided Dive ''',
+                    f'''and ran for {str(self.opt.runtime[1])}.}}}}'''
+                    ])
+                total_runtime += runtime_footnote
+            infobox['runtime'] = total_runtime
         # prompt if infobox airdate conflicts w/user entry
         if does_value_exist(infobox, 'airdate') and self.opt.airdate:
             if Airdate(infobox['airdate'].value.strip()).date == self.opt.airdate.date:
@@ -497,6 +533,8 @@ class EpisodeBot(
                 infobox['transcript'] = self.opt.transcript_link
             if not does_value_exist(infobox, 'midst illustrator'):
                 infobox['midst illustrator'] = self.opt.illustrator
+        elif ep.prefix == '4SD' and len(self.opt.yt) == 2:
+            infobox = self.update_4SD_infobox(infobox)
         else:
              infobox = self.handle_infobox_image(infobox)
 
@@ -739,30 +777,42 @@ class YTSwitcherBot(EpisodeBot):
         self.current_page = pywikibot.Page(self.site, YT_SWITCHER)
         text = self.current_page.text
         ep = self.opt.ep
-        yt = self.opt.yt
         prev_ep = ep.get_previous_episode()
+        yt_url_list = [yt.url for yt in self.opt.yt]
+
+        # format yt_urls
+        if len(yt_url_list) == 1:
+            yt_urls = f'{{"{yt_url_list[0]}"}}'
+        elif ep.prefix == '4SD':
+            yt_urls = '\n'.join([
+                f'{{',
+                f'        {{"{yt_url_list[0]}", "4-Sided Dive"}},',
+                f'        {{"{yt_url_list[1]}", "More-Sided Dive"}},',
+                f'    }}'])
+        else:
+            yt_urls = f'{{\n' + ',\n'.join([f'        {{"{yt_url}"}}' for yt_url in yt_url_list]) + f'\n}}'
 
         # Pattern to match ep code and its video array
-        pattern = fr'\["{ep.code}"\]\s*=\s*\{{.*?\}},'
+        pattern = fr'''\["{ep.code}"\]\s*=\s*(\{{.*?\}},|\{{(?:\s*\{{.*?\}},\s*)+}},)'''
 
         # if it already exists as an entry, substitute in yt_link
         if ep.code in text:
             text = re.sub(pattern,
-                          fr'''["{ep.code}"] = {"{"}"{yt.url}"{"}"},''',
+                          fr'''["{ep.code}"] = {yt_urls},''',
                           text,
                           flags=re.DOTALL)
 
         # if previous episode is already there, append after it
         elif prev_ep and re.search(fr'''\["{prev_ep.code}"\]\s*=\s*\{{.*?\}},''', text):
             prev_entry = re.search(fr'''\["{prev_ep.code}"\]\s*=\s*\{{.*?\}},''', text).group()
-            new_entry = f'''    ["{ep.code}"]  = {"{"}"{yt.url}"{"}"},'''
+            new_entry = f'''    ["{ep.code}"]  = {yt_urls},'''
             text = text.replace(prev_entry, '\n'.join([prev_entry, new_entry]))
 
         # otherwise, append episode to the end of the list
         else:
             text = text.replace(
                 '["default"] = {""}',
-                f'["{ep.code}"]  = {"{"}"{yt.url}"{"}"},\n    ["default"] = {{""}}'
+                f'["{ep.code}"]  = {yt_urls},\n    ["default"] = {{""}}'
                 )
 
         self.put_current(text, summary=f"Adding youtube link for {ep.code} (via pywikibot)")
@@ -802,7 +852,7 @@ class EpListBot(EpisodeBot):
             'airdate': self.opt.airdate.date,
             'VOD': ep.wiki_vod,
             'transcript': transcript,
-            'runtime': self.opt.runtime,
+            'runtime': str(sum(self.opt.runtime, timedelta())),
             'aux1': aux1,
             'aux2': game_system,
             'summary': self.opt.episode_summary,
@@ -1290,7 +1340,7 @@ class LongShortBot(EpisodeBot):
 
     def check_if_longest(self):
         ep = self.opt.ep
-        runtime = Runtime(self.opt.runtime)
+        runtime = sum(self.opt.runtime, timedelta())
         wikicode = self.get_wikicode()
         heading = self.get_relevant_heading()
         is_longest = False
@@ -1316,7 +1366,7 @@ class LongShortBot(EpisodeBot):
 
     def check_if_shortest(self):
         ep = self.opt.ep
-        runtime = Runtime(self.opt.runtime)
+        runtime = sum(self.opt.runtime, timedelta())
         wikicode = self.get_wikicode()
         heading = self.get_relevant_heading()
         is_shortest = False
@@ -1485,9 +1535,18 @@ def main(*args: str) -> None:
         elif option in ['ep_id', 'ep']:
             value = get_validated_input(arg='ep', value=value, regex=EP_REGEX)
             options['ep'] = Ep(value)
-        elif option in ['yt_id', 'yt']:
+        elif re.match(r'^(yt|vod)\d*$', option, flags=re.IGNORECASE):
+            # allow for a list of videos/youtube IDs
             value = get_validated_input(arg=option, value=value, regex=YT_ID_REGEX)
-            options['yt'] = YT(value)
+            if not options.get('yt'):
+                options['yt'] = []
+            options['yt'].append(YT(value))
+        elif re.match(r'^runtime\d*$', option, flags=re.IGNORECASE):
+            # allow for a list of videos/youtube IDs
+            value = get_validated_input(arg=option, value=value, regex=r'\d{1,2}:\d{1,2}(:\d{1,2})?')
+            if not options.get('runtime'):
+                options['runtime'] = []
+            options['runtime'].append(Runtime(value))
         elif option in ['actors', 'host']:
             if option == 'actors':
                 options[option] = Actors(value, actor_data=ACTOR_DATA)
@@ -1502,7 +1561,7 @@ def main(*args: str) -> None:
         elif option == 'airtime':
             options['airtime'] = Airdate(value)
         elif option in (
-            'summary', 'runtime', 'new_ep_name', 'episode_summary', 'image_name'):
+            'summary', 'new_ep_name', 'episode_summary', 'image_name'):
             if not value:
                 value = pywikibot.input(f'Please enter a value for {arg} (leave blank to ignore)')
             if value:
@@ -1538,7 +1597,7 @@ def main(*args: str) -> None:
         if req not in options:
             if req == 'yt' and any([options.get(x) for x in ['update_page', 'yt_list', 'transcript', 'upload']]):
                 value = get_validated_input(arg='yt', regex=YT_ID_REGEX, input_msg="Please enter 11-digit YouTube ID for the video")
-                options[req] = YT(value)
+                options[req] = [YT(value)]
             elif req == 'new_ep_name':
                 if any([options.get(x) for x in ['update_page', 'move']]):
                     value = pywikibot.input(f"If {options['old_ep_name']} will be moved, enter new page name")
@@ -1555,7 +1614,7 @@ def main(*args: str) -> None:
                 options[req] = Actors(value, actor_data=ACTOR_DATA)
             elif req == 'runtime' and any([options.get(x) for x in ['update_page', 'ep_list', 'long_short']]):
                 value = get_validated_input(arg='runtime', regex=r'\d{1,2}:\d{1,2}(:\d{1,2})?', input_msg="Please enter video runtime (HH:MM:SS or MM:SS)")
-                options['runtime'] = value
+                options['runtime'] = [value]
             elif req == 'ep':
                 value = get_validated_input(arg=req, value=value, regex=EP_REGEX)
                 options['ep'] = Ep(value)
@@ -1647,7 +1706,7 @@ def main(*args: str) -> None:
                 description = options['file_desc']
             elif options['ep'].prefix == 'Midst':
                 description = f'''== Summary ==
-{{{{ep|{options['ep'].code}}}}} thumbnail from the [https://youtu.be/{options['yt'].yt_id} YouTube video].
+{{{{ep|{options['ep'].code}}}}} thumbnail from the [https://youtu.be/{options['yt'][0].yt_id} YouTube video].
 
 == Licensing ==
 {{{{Fairuse}}}}
@@ -1663,7 +1722,7 @@ def main(*args: str) -> None:
                 filename = options['image_name']
             else:
                 filename = options['ep'].image_filename
-            thumbnail_url = select_thumbnail_url(options['yt'])
+            thumbnail_url = select_thumbnail_url(options['yt'][0])
             pywikibot.output(f"\n{description}\n")
             keep = pywikibot.input_yn("Do you want to use this default image description?")
             if not keep:
@@ -1723,6 +1782,42 @@ def main(*args: str) -> None:
                         verify_description=False,
                     )
                         icon_bot.run()
+            elif options['ep'].prefix == '4SD':
+                file_value = f"File:{options['ep'].game_filename}"
+                file = pywikibot.Page(bot1.site, file_value)
+                if file.exists():
+                    pywikibot.output('Skipping 4SD game thumbnail creation (file already exists)')
+                else:
+                    summary = f"{options['ep'].code} game thumbnail (uploaded via pywikibot)"
+                    value = pywikibot.input(f"L-R actor order in {options['yt'][1].thumbnail_url} game thumbnail (first names ok)")
+                    actors = Actors(value, actor_data=ACTOR_DATA)
+                    description = make_image_file_description(
+                        ep=options['ep'],
+                        actors=actors,
+                    )
+                    pywikibot.output(f"\n{description}\n")
+                    keep = pywikibot.input_yn("Do you want to use this default 4SD game thumbnail description?")
+                    if not keep:
+                        from pywikibot import editor as editarticle
+                        editor = editarticle.TextEditor()
+                        try:
+                            new_description = editor.edit(description)
+                            description = new_description
+                            pywikibot.output(f"\n<<yellow>>New description:<<default>>\n\n{description}\n")
+                        except ImportError:
+                            raise
+                        except Exception as e:
+                            pywikibot.error(e)
+                    if options['yt'][1]:
+                        game_thumb_bot = UploadRobot(
+                        generator=gen,
+                        url=options['yt'][1].thumbnail_url,
+                        description=description,
+                        use_filename=options['ep'].game_filename,
+                        summary=summary,
+                        verify_description=False,
+                    )
+                        game_thumb_bot.run()
 
         if options.get('ep_array'):
             bot2 = EpArrayBot(generator=gen, **options)
@@ -1796,7 +1891,7 @@ def main(*args: str) -> None:
                 bot12.current_page = pywikibot.Page(bot11.site, f"Transcript:{options['new_ep_name']}")
                 bot12.treat_page()
             elif has_dupes:
-                command = f"\n<<yellow>>python pwb.py dupes -ep:{options['ep'].code} -yt:{options['yt'].yt_id}<<default>>"
+                command = f"\n<<yellow>>python pwb.py dupes -ep:{options['ep'].code} -yt:{options['yt'][0].yt_id}<<default>>"
                 pywikibot.output(f'Skipping ts duplicate processing. You can run this later:{command}')
 
         if options.get('transcript_list'):

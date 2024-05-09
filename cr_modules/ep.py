@@ -452,6 +452,12 @@ class Ep:
         return filename
 
     @property
+    def game_filename(self):
+        '''For 4SD only; thumbnail for more-sided dive'''
+        filename = f'{self.code} More-Sided Episode Thumb.jpg'
+        return filename
+
+    @property
     def icon_filename(self):
         '''For Midst only; .png files on midst.co'''
         filename = f"{self.code} Episode Icon.png"
