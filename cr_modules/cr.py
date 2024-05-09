@@ -57,8 +57,11 @@ RUNTIME_REGEX = r'\d{1,2}:\d{2}:\d{2}'
 RUNTIME_FORMAT = '%H:%M:%S'
 RUNTIME_2_REGEX = r'\d{1,2}:\d{2}'
 RUNTIME_2_FORMAT = '%M:%S'
+RUNTIME_3_REGEX = r'\d+'
+RUNTIME_3_FORMAT = '%S'
 runtime_options = ((RUNTIME_REGEX, RUNTIME_FORMAT),
                    (RUNTIME_2_REGEX, RUNTIME_2_FORMAT),
+                   (RUNTIME_3_REGEX, RUNTIME_3_FORMAT),
                    )
 
 
@@ -349,15 +352,29 @@ class Runtime:
             t = input_timecode
             self.timecode = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
         elif isinstance(input_timecode, str):
-            self.timecode = convert_string_to_timecode(input_timecode)
+            if input_timecode.isdigit():
+                self.timecode = timedelta(seconds=int(input_timecode))
+            else:
+                self.timecode = convert_string_to_timecode(input_timecode)
 
     def __repr__(self):
         return str(self.timecode)
 
     def __add__(self, other):
-        if not isinstance(other, self.__class__):
-            return False
-        return Runtime(self.timecode + other.timecode)
+        if isinstance(other, self.__class__):
+            return Runtime(self.timecode + other.timecode)
+        elif isinstance(other, timedelta):
+            return Runtime(self.timecode + other)
+        elif isinstance(other, str):
+            if other.isdigit():
+                return Runtime(self.timecode + timedelta(seconds=int(other)))
+            else:
+                return Runtime(self.timecode + convert_string_to_timecode(other))
+        else:
+            return NotImplemented
+
+    def __radd__(self, other):
+        return self.__add__(other)
 
     def __sub__(self, other):
         if not isinstance(other, self.__class__):
