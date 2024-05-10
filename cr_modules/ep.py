@@ -267,11 +267,22 @@ class Season:
             name = pattern.sub('_', attr).lower()
             setattr(self, name, value)
         if not hasattr(self, 'name'):
-            self.name = f"Season {self.number}"
+            self.name = self.num_name
 
-    def __repr__(self, episode_decoder=EPISODE_DECODER):
-        campaign_title = episode_decoder.get(self.show_prefix, {}).get('title', '')
-        return f"Season({campaign_title}, {self.name})"
+    @property
+    def campaign_title(self, episode_decoder=EPISODE_DECODER):
+        return episode_decoder.get(self.show_prefix, {}).get('title', '')
+
+    @property
+    def show_title(self):
+        return self.campaign_title
+
+    @property
+    def num_name(self):
+        return f"Season {self.number}"
+
+    def __repr__(self):
+        return f"Season({self.show_title}, {self.name})"
 
 
 class Arc(Season):
@@ -279,21 +290,31 @@ class Arc(Season):
         return f"Arc({self.page})"
 
     @property
-    def page(self, episode_decoder=EPISODE_DECODER):
-        campaign_title = episode_decoder.get(self.show_prefix, {}).get('title', '')
-        arc_title = (f'Arc {self.arc_num}: {self.title}'
-                       if hasattr(self, 'title') and self.title
-                       else f' Arc {self.arc_num}')
-        return f"{campaign_title} {arc_title}"
+    def num_name(self):
+        return f"Arc {self.number}"
 
     @property
-    def category(self):
-        return f'Category: {self.title} arc'
+    def page(self):
+        arc_name = (f'Arc {self.arc_num}: {self.name}'
+                       if self.name != self.num_name
+                       else f'Arc {self.arc_num}')
+        return f"{self.campaign_title} {arc_name}"
+
+    @property
+    def category(self, episode_decoder=EPISODE_DECODER):
+        if self.name == self.num_name:
+            return f'Category:{self.campaign_title} Arc {self.number}'
+        else:
+            return f'Category:{self.name} arc'
 
     @property
     def character_category(self):
-        arc_title = re.sub(r'^The ', '', self.title)
-        return f'Category:Characters in the {arc_title} arc'
+        if self.name == self.num_name:
+            cat_name = f'{self.campaign_title} Arc {self.number}'
+        else:
+            cat_name = self.name
+        arc_name = re.sub(r'^The ', '', cat_name)
+        return f'Category:Characters in the {arc_name} arc'
 
 
 class Ep:
