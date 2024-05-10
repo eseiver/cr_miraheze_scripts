@@ -876,7 +876,7 @@ class EpListBot(EpisodeBot):
         ep = self.opt.ep
         prev_ep = ep.get_previous_episode()
 
-        list_page_name = ep.campaign.list_link
+        list_page_name = ep.campaign.current_list
         if not list_page_name:
             list_page_name = pywikibot.input(f"Please enter name of list of episodes page for {ep.code}")
 

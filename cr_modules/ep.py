@@ -223,6 +223,9 @@ class Show:
         if not hasattr(self, 'list_link'):
             self.list_link = self.title
 
+        if not hasattr(self, 'current_list'):
+            self.current_list = self.list_link
+
         if not hasattr(self, 'thumbnail_category'):
             self.thumbnail_category = 'Episode thumbnails'
 
