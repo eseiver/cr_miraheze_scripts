@@ -958,12 +958,11 @@ class TranscriptBot(EpisodeBot):
         if no_translations is None:
             no_translations = self.opt.no_translations
         assert no_translations is not None
-
         if self.opt.ignore_break:
-            ts = YoutubeTranscript(ep=self.opt.ep, yt=self.opt.yt,
+            ts = YoutubeTranscript(ep=self.opt.ep, yt=self.opt.yt[0],
                                    actor_data=ACTOR_DATA, ignore_break=True)
         else:
-            ts = YoutubeTranscript(ep=self.opt.ep, yt=self.opt.yt,
+            ts = YoutubeTranscript(ep=self.opt.ep, yt=self.opt.yt[0],
                                    actor_data=ACTOR_DATA)
         if no_translations:
             ts.download_and_build_transcript()
