@@ -550,9 +550,10 @@ class EpisodeBot(
                 infobox['caption'] = make_image_caption(actors=self.opt.actors, ep=ep)
 
         # Add game system for one-shots
-        if (ep.prefix == 'OS' and
+        if (ep.prefix == 'OS' and not
+            (infobox.has_param('system') or remove_comments(infobox['system'].value)) and
             self.opt.get('game_system', '').lower() != 'dungeons & dragons'):
-            infobox['system'] = self.opt['game_system']
+            infobox.add('system', self.opt['game_system'], after='runtime')
 
         # add logline for Midst if not there yet
         if ep.prefix == 'Midst' and self.opt.get('logline'):
