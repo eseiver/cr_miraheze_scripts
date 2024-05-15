@@ -30,8 +30,8 @@ TRANSCRIPTS_LIST = 'Transcripts'
 MIDST_APPENDIX_ARRAY = 'Module:Midst appendices/Array'
 
 # offline access
-DUMP_FILE = 'criticalrolewiki_xml_9f434337d0bebb5e3bad.xml.gz'
-DUMP_STRING = '12:33, April 22, 2024'
+DUMP_FILE = 'criticalrolewiki_xml_3561f6de4cf58cfd217a.xml.gz'
+DUMP_STRING = '11:38, May 12, 2024'
 DUMP_PATH = os.path.join(DATA_PATH, DUMP_FILE)
 DUMP_DATE = datetime.strptime(DUMP_STRING, '%H:%M, %B %d, %Y')
 LATEST_DUMP_FILE = 'latest_revisions_only.xml.gz'
