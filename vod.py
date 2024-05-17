@@ -1173,8 +1173,12 @@ class CategoryBot(EpisodeBot):
 
     def treat_page(self):
         ep = self.opt.ep
+        if ep.prefix != 'M':
+            show = f' {ep.show.title}'
+        else:
+            show = ''
         category_name = f'Category:Articles needing citations/{ep.code}'
-        campaign_category = f'[[Category:Articles needing {ep.show.title} citations]]'
+        campaign_category = f'[[Category:Articles needing{show} citations]]'
 
         self.current_page = pywikibot.Page(self.site, category_name)
         text = '\n'.join([campaign_category,
