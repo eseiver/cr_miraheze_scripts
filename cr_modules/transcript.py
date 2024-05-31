@@ -414,10 +414,11 @@ class YoutubeTranscript:
 
         return transcript
 
-    def check_ts_names(self, transcript, language=DEFAULT_LANGUAGE):
+    def check_ts_names(self, transcript, language=DEFAULT_LANGUAGE, speaker_tags=None):
         '''For making sure that there are no typos in speakers' names. Returns error message if not.'''
         error_warning = ''
-        transcript_names = ' '.join([x.split(':')[0] for x in transcript.splitlines() if ':' in x])
+        transcript_names = ' '.join([x.split(':')[0] for x in transcript.splitlines()
+                                     if ':' in x and 'Category' not in x])
         capital_names = set(re.search(r'[A-Z]+', x).group() for x in transcript_names.split() if re.search(r'\b[A-Z]+\b', x))
         other_names = set(x for x in transcript_names.split()
                           if not re.search(r'[A-Z]+', x) or
@@ -425,7 +426,7 @@ class YoutubeTranscript:
 
         if language == 'ru':
             speaker_tags = SPEAKER_TAGS_RU
-        else:
+        elif speaker_tags is None:
             speaker_tags = self.actor_data.speaker_tags
 
         # don't check names if there are no standard ones to begin with
