@@ -68,8 +68,9 @@ No changes will be made automatically. Actions are skipped if change is not need
 the episode already exists on the module page).
 
 All other parameters are passed in the format -parameter:value. Use "quotes" around value if it has
-spaces (e.g., -actors:"Marisha, Taliesin, Matt"). "!" needs to be escaped, even in quotes, as "\\!"
-(one backslash only).
+spaces (e.g., -actors:"Marisha, Taliesin, Matt"). If a string includes a "!", it will only work if it is
+enclosed in single quotes like '!'.
+
 You will be prompted to enter a missing value if needed. No quotation marks needed in this case.
 
 -ep:              REQUIRED. The CxNN code of the episode with newly uploaded VOD (-ep_id also valid)
