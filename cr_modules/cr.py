@@ -497,8 +497,7 @@ def get_validated_input(regex, arg, value='', attempts=3, req=True,
     while counter < attempts and not re.match(regex, value, flags=re.IGNORECASE):
         value = pywikibot.input(input_msg)
         counter += 1
-    if not re.match(regex, value):
+    if not re.match(regex, value) and req:
         print(f'\nInvalid {arg} "{value}". Maximum attempts reached\n', file=sys.stderr)
-        if req:
-            sys.exit()
+        sys.exit()
     return value
