@@ -1624,7 +1624,7 @@ def main(*args: str) -> None:
                 options[req] = Actors(value, actor_data=ACTOR_DATA)
             elif req == 'runtime' and any([options.get(x) for x in ['update_page', 'ep_list', 'long_short']]):
                 value = get_validated_input(arg='runtime', regex=r'\d{1,2}:\d{1,2}(:\d{1,2})?', input_msg="Please enter video runtime (HH:MM:SS or MM:SS)")
-                options['runtime'] = [value]
+                options['runtime'] = [Runtime(value)]
             elif req == 'ep':
                 value = get_validated_input(arg=req, value=value, regex=EP_REGEX)
                 options['ep'] = Ep(value)
