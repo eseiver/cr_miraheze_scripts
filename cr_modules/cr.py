@@ -197,10 +197,15 @@ def make_image_caption(ep: Ep, actors: Actors) -> str:
 
 def make_image_file_description(ep: Ep, actors: Actors) -> str:
     """The description of the image thumbnail file to be uploaded."""
-    actor_list = actors.name_string if actors and actors.name_string else "the ''Critical Role'' cast"
+    if actors and actors.name_string:
+        actor_list = actors.name_string
+    elif ep.is_campaign:
+        actor_list = "the ''Critical Role'' cast"
+    else:
+        actor_list = f"the ''{ep.show.title}'' cast"
 
     file_description = f"""== Summary ==
-{ep.wiki_code} thumbnail featuring {actor_list}.
+{ep.wiki_noshow} thumbnail featuring {actor_list}.
 
 == Licensing ==
 {{{{Fairuse}}}}
