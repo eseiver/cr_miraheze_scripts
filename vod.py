@@ -321,10 +321,7 @@ class EpisodeBot(
             else:
                 file_value = image_value
             file = pywikibot.Page(self.site, file_value)
-            if file.exists() and image_value and self.opt.ep.prefix != "Midst":
-                pywikibot.output(f"Existing page '{file_value}' in {image} field; skipping image upload")
-                self.opt.upload = False
-            elif image_value and not image_name:
+            if image_value and not image_name:
                 image_value = image_value.replace('File:', '')
                 self.opt.image_name = image_value
             # if image already (or to be) uploaded but not in param, add to infobox
@@ -1707,57 +1704,59 @@ def main(*args: str) -> None:
             airdate_string = get_validated_input(arg='airdate', regex=DATE_REGEX)
             options['airdate'] = Airdate(airdate_string)
 
-        # if image thumbnail field was filled in, do not upload.
-        if bot1.opt.upload is False:
-            options['upload'] = False
 
         if options.get('upload'):
-            if options.get('file_desc'):
-                description = options['file_desc']
-            elif options['ep'].prefix == 'Midst':
-                description = f'''== Summary ==
-{{{{ep|{options['ep'].code}}}}} thumbnail from the [https://youtu.be/{options['yt'][0].yt_id} YouTube video].
-
-== Licensing ==
-{{{{Fairuse}}}}
-
-[[Category:Midst episode thumbnails]]'''
-            else:
-                description = make_image_file_description(
-                    ep=options['ep'],
-                    actors=options.get('actors'),
-                    )
-            summary = f"{options['ep'].code} episode thumbnail (uploaded via pywikibot)"
             if options.get('image_name'):
                 filename = options['image_name']
             else:
                 filename = options['ep'].image_filename
-            thumbnail_url = select_thumbnail_url(options['yt'][0])
-            pywikibot.output(f"\n{description}\n")
-            keep = pywikibot.input_yn("Do you want to use this default image description?")
-            if not keep:
-                from pywikibot import editor as editarticle
-                editor = editarticle.TextEditor()
-                try:
-                    new_description = editor.edit(description)
-                    description = new_description
-                    pywikibot.output(f"\n<<yellow>>New description:<<default>>\n\n{description}\n")
-                except ImportError:
-                    raise
-                except Exception as e:
-                    pywikibot.error(e)
-            if thumbnail_url:
-                thumbnail_bot = UploadRobot(
-                    generator=gen,
-                    url=thumbnail_url,
-                    description=description,
-                    use_filename=filename,
-                    summary=summary,
-                    verify_description=False,
-                )
-                thumbnail_bot.run()
+            file_value = f"File:{filename}"
+            file = pywikibot.Page(bot1.site, file_value)
+            if file.exists():
+                pywikibot.output('Skipping thumbnail creation (file already exists)')
             else:
-                pywikibot.output('High-res and backup YouTube thumbnail not found. Check if YouTube ID is correct.')
+                if options.get('file_desc'):
+                    description = options['file_desc']
+                elif options['ep'].prefix == 'Midst':
+                    description = f'''== Summary ==
+    {{{{ep|{options['ep'].code}}}}} thumbnail from the [https://youtu.be/{options['yt'][0].yt_id} YouTube video].
+
+    == Licensing ==
+    {{{{Fairuse}}}}
+
+    [[Category:Midst episode thumbnails]]'''
+                else:
+                    description = make_image_file_description(
+                        ep=options['ep'],
+                        actors=options.get('actors'),
+                        )
+                summary = f"{options['ep'].code} episode thumbnail (uploaded via pywikibot)"
+                thumbnail_url = select_thumbnail_url(options['yt'][0])
+                pywikibot.output(f"\n{description}\n")
+                keep = pywikibot.input_yn("Do you want to use this default image description?")
+                if not keep:
+                    from pywikibot import editor as editarticle
+                    editor = editarticle.TextEditor()
+                    try:
+                        new_description = editor.edit(description)
+                        description = new_description
+                        pywikibot.output(f"\n<<yellow>>New description:<<default>>\n\n{description}\n")
+                    except ImportError:
+                        raise
+                    except Exception as e:
+                        pywikibot.error(e)
+                if thumbnail_url and not file.exists():
+                    thumbnail_bot = UploadRobot(
+                        generator=gen,
+                        url=thumbnail_url,
+                        description=description,
+                        use_filename=filename,
+                        summary=summary,
+                        verify_description=False,
+                    )
+                    thumbnail_bot.run()
+                elif not thumbnail_url:
+                    pywikibot.output('High-res and backup YouTube thumbnail not found. Check if YouTube ID is correct.')
 
             if options['ep'].prefix == 'Midst':
                 file_value = f"File:{options['ep'].icon_filename}"
@@ -1798,30 +1797,40 @@ def main(*args: str) -> None:
                 if file.exists():
                     pywikibot.output('Skipping 4SD game thumbnail creation (file already exists)')
                 else:
-                    summary = f"{options['ep'].code} game thumbnail (uploaded via pywikibot)"
-                    value = pywikibot.input(f"L-R actor order in {options['yt'][1].thumbnail_url} game thumbnail (first names ok)")
-                    actors = Actors(value, actor_data=ACTOR_DATA)
-                    description = make_image_file_description(
-                        ep=options['ep'],
-                        actors=actors,
-                    )
-                    pywikibot.output(f"\n{description}\n")
-                    keep = pywikibot.input_yn("Do you want to use this default 4SD game thumbnail description?")
-                    if not keep:
-                        from pywikibot import editor as editarticle
-                        editor = editarticle.TextEditor()
-                        try:
-                            new_description = editor.edit(description)
-                            description = new_description
-                            pywikibot.output(f"\n<<yellow>>New description:<<default>>\n\n{description}\n")
-                        except ImportError:
-                            raise
-                        except Exception as e:
-                            pywikibot.error(e)
-                    if options['yt'][1]:
+                    if len(options['yt']) < 2:
+                        game_yt = get_validated_input(
+                            arg='yt', value='',regex=YT_ID_REGEX, req=False, attempts=1,
+                            input_msg="Enter YT id for More-Sided Dive (leave blank to ignore)")
+                        if game_yt:
+                            game_yt = YT(game_yt)
+                            options['yt'][1] = game_yt
+                            pywikibot.output('\n<<yellow>>Runtime<<default>> likely does not include this video and may need to be changed.\n')
+                    else:
+                        game_yt = options['yt'][1]
+                    if game_yt:
+                        summary = f"{options['ep'].code} game thumbnail (uploaded via pywikibot)"
+                        value = pywikibot.input(f"L-R actor order in {game_yt.thumbnail_url} game thumbnail (first names ok)")
+                        actors = Actors(value, actor_data=ACTOR_DATA)
+                        description = make_image_file_description(
+                            ep=options['ep'],
+                            actors=actors,
+                        )
+                        pywikibot.output(f"\n{description}\n")
+                        keep = pywikibot.input_yn("Do you want to use this default 4SD game thumbnail description?")
+                        if not keep:
+                            from pywikibot import editor as editarticle
+                            editor = editarticle.TextEditor()
+                            try:
+                                new_description = editor.edit(description)
+                                description = new_description
+                                pywikibot.output(f"\n<<yellow>>New description:<<default>>\n\n{description}\n")
+                            except ImportError:
+                                raise
+                            except Exception as e:
+                                pywikibot.error(e)
                         game_thumb_bot = UploadRobot(
                         generator=gen,
-                        url=options['yt'][1].thumbnail_url,
+                        url=game_yt.thumbnail_url,
                         description=description,
                         use_filename=options['ep'].game_filename,
                         summary=summary,
