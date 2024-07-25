@@ -201,6 +201,8 @@ def make_image_file_description(ep: Ep, actors: Actors) -> str:
         actor_list = actors.name_string
     elif ep.is_campaign:
         actor_list = "the ''Critical Role'' cast"
+    elif ep.prefix in ['OS', 'M']:
+        actor_list = "the cast"
     else:
         actor_list = f"the ''{ep.show.title}'' cast"
 
