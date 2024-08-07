@@ -586,7 +586,7 @@ class EpisodeBot(
             ):
             synopsis_heading = next((x for x in wikicode.filter_headings() if x.title.matches('Synopsis')), None)
             if synopsis_heading:
-                text = text.replace(str(synopsis_heading), str(synopsis_heading) + '\n{{TranscriptLink}}\n')
+                text = text.replace(str(synopsis_heading), str(synopsis_heading) + '\n{{TranscriptLink}}')
                 assert 'TranscriptLink' in text
             else:
                 pywikibot.output("No synopsis section found; link to transcript in article will not be added.")
