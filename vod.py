@@ -148,7 +148,7 @@ from cr_modules.ep import *
 from cr_modules.transcript import YoutubeTranscript, DEFAULT_LANGUAGE
 from dupes import DupeDetectionBot
 
-MINISERIES = ['OS', 'E', 'CO']
+MINISERIES = ['OS', 'E', 'CO', 'MW']
 
 
 class EpisodeBot(
