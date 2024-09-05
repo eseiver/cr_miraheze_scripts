@@ -150,6 +150,12 @@ from dupes import DupeDetectionBot
 
 MINISERIES = ['OS', 'E', 'CO', 'MW']
 
+# for streamlining YouTube language codes
+LANGUAGE_CONVERSIONS = {
+    'en-US': 'en',
+    'en-UK': 'en',
+}
+
 
 class EpisodeBot(
     SingleSiteBot,  # A bot only working on one site
@@ -974,7 +980,7 @@ class TranscriptBot(EpisodeBot):
             ts.download_all_language_transcripts()
         return ts
 
-    def make_single_transcript(self, language=DEFAULT_LANGUAGE):
+    def make_single_transcript_page(self, language=DEFAULT_LANGUAGE):
         url = 'Transcript:' + self.opt.new_page_name
         self.current_page = pywikibot.Page(self.site, url)
         ts = self.build_transcripts(no_translations=True)
@@ -984,34 +990,40 @@ class TranscriptBot(EpisodeBot):
             pywikibot.output(f'Transcript page already exists for {self.opt.new_page_name}; creation skipped')
             ts.transcript_dict[language] = self.current_page.text
         else:
-            self.put_current(ts.transcript_dict.get(language),
+            transcript_text = ts.transcript_dict.get(language)
+            self.put_current(transcript_text,
                              summary=f"Creating {self.opt.ep.code} transcript (via pywikibot)")
         self.opt.ts = ts
 
-    def make_all_transcripts(self):
+    def make_all_transcript_pages(self):
         ts = self.build_transcripts(no_translations=False)
         for language, transcript in ts.transcript_dict.items():
-            if language == DEFAULT_LANGUAGE:
+            # convert using language table (if needed)
+            wiki_language = LANGUAGE_CONVERSIONS.get(
+                language,
+                language
+            )
+            if wiki_language == DEFAULT_LANGUAGE:
                 url = 'Transcript:' + self.opt.new_page_name
             else:
-                url = f'Transcript:{self.opt.new_page_name}/{language}'
+                url = f'Transcript:{self.opt.new_page_name}/{wiki_language}'
 
             self.current_page = pywikibot.Page(self.site, url)
             if self.current_page.exists() and self.current_page.text:
                 # if existing transcript page, replace in dict
-                pywikibot.output(f'{language} transcript page already exists for {self.opt.new_page_name}; creation skipped')
-                ts.transcript_dict[language] = self.current_page.text
+                pywikibot.output(f'{wiki_language} transcript page already exists for {self.opt.new_page_name}; creation skipped')
+                ts.transcript_dict[wiki_language] = self.current_page.text
             else:
                 self.put_current(transcript,
-                                 summary=f"Creating {self.opt.ep.code} {language} transcript (via pywikibot)")
+                                 summary=f"Creating {self.opt.ep.code} {wiki_language} transcript (via pywikibot)")
         self.opt.ts = ts
 
 
     def treat_page(self):
         if self.opt.no_translations:
-            self.make_single_transcript()
+            self.make_single_transcript_page()
         else:
-            self.make_all_transcripts()
+            self.make_all_transcript_pages()
 
 
 class TranscriptListBot(EpisodeBot):
