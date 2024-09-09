@@ -471,7 +471,9 @@ class YoutubeTranscript:
         # Step 1: combine lines and flag duplicates
         ts = self.process_captions(captions, language=language)
 
-        # Step 2: replace curly quotes and apostrophes
+        # Step 2: cleanup text globally
+
+        # Step 2a: replace curly quotes and apostrophes
         ts = (ts
                 .replace('“', '"')
                 .replace('”','"')
@@ -479,8 +481,26 @@ class YoutubeTranscript:
                 .replace("’", "'")
                 )
 
-        # Step 3: remove and replace html markup
+        # Step 2b: fix extra whitespace
+        ts = (ts
+              .replace('  ', ' ')
+              .replace('\n\n\n', '\n\n')
+        )
+
+        # Step 2c: remove and replace html markup
         ts = wikify_html_string(ts)
+
+        # Step 3: cleanup formatting at sentence-level
+        fixes = []
+        for line in ts.splitlines():
+            if not line.strip():
+                continue
+            # flag missing punctuation at end of sentence
+            if ':' in line and line[-1].isalnum():
+                fixed_line = line + "<!-- missing punctuation at end -->"
+                fixes.append((line, fixed_line))
+        for line, fixed_line in fixes:
+            ts = ts.replace(line, fixed_line)
 
         # Step 4: Comment out the break
         if not self.ignore_break and language==DEFAULT_LANGUAGE and self.ep.is_campaign:
