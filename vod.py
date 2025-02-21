@@ -437,7 +437,7 @@ class EpisodeBot(
         # prepend short description
         # don't add if already exists
         shortdesc = next((x for x in wikicode.filter_templates()
-                          if x.name.matches("short description")),
+                          if x.name.matches(("short description", "shortdesc"))),
                          '')
         shortdesc_value = ''
 
@@ -448,10 +448,7 @@ class EpisodeBot(
             elif ep.shortdesc_value:
                 # if one-shot in the episode title, no shortdesc is needed
                 if ep.prefix == 'OS' and any(
-                    any(
-                        target.lower() in value.lower()
-                        for target in ['one-shot', 'one shot']
-                    )
+                    re.search('one( |-)shot', value, flags=re.IGNORECASE)
                     for value in [old_ep_name, self.opt.new_ep_name]
                 ):
                     shortdesc_value = 'none'
@@ -554,8 +551,8 @@ class EpisodeBot(
                 infobox['caption'] = make_image_caption(actors=self.opt.actors, ep=ep)
 
         # Add game system for one-shots
-        if (ep.prefix == 'OS' and not
-            (infobox.has_param('system') or remove_comments(infobox['system'].value)) and
+        if (ep.prefix == 'OS' and 
+            (not infobox.has_param('system') or not remove_comments(infobox['system'].value)) and
             self.opt.get('game_system', '').lower() != 'dungeons & dragons'):
             infobox.add('system', self.opt['game_system'], after='runtime')
 
