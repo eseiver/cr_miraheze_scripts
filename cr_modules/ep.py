@@ -350,6 +350,7 @@ class Ep:
 
         self.code = self.standardize_code(episode_code)
         self._code = episode_code
+        self.code_regex = fr'''\b{self.code}\b'''
         self.padding_limit = padding_limit
         self.max_letter = 'b'
 

@@ -747,7 +747,7 @@ class EpArrayBot(EpisodeBot):
         text = text.replace('\t', '    ')
 
         current_entry = next((x for x in re.split(r'\n\s+\},\n',
-                            text) if re.search(fr'\["{ep.code}"\]', x)),
+                            text) if re.search(ep.code_regex, x)),
                             '')
         if current_entry:
             current_entry += '\n    },\n'
@@ -803,7 +803,7 @@ class YTSwitcherBot(EpisodeBot):
         pattern = fr'''\["{ep.code}"\]\s*=\s*(\{{.*?\}},|\{{(?:\s*\{{.*?\}},\s*)+}},)'''
 
         # if it already exists as an entry, substitute in yt_link
-        if ep.code in text:
+        if re.search(ep.code_regex, text):
             text = re.sub(pattern,
                           fr'''["{ep.code}"] = {yt_urls},''',
                           text,
@@ -898,7 +898,7 @@ class EpListBot(EpisodeBot):
         # try finding by episode code
         previous_entry_wiki = next((x for x in wikicode.filter_templates()
                 if x.has_param('ep') and x.name.matches('Episode table entry') and
-                prev_ep and prev_ep.code in x['ep']), '')
+                prev_ep and re.search(prev_ep.code_regex, x['ep'])), '')
         #if that fails, try finding the last entry
         if not previous_entry_wiki:
             for template in reversed(wikicode.filter_templates()):
@@ -909,7 +909,7 @@ class EpListBot(EpisodeBot):
         num = int(str(previous_entry_wiki['no'].value)) + 1 if previous_entry_wiki else ep.number
 
         # create new table entry from scratch if it doesn't exist yet, inserting after previous episode
-        if not any([ep.code in str(x) for x in wikicode.filter_templates()
+        if not any([re.search(ep.code_regex, str(x)) for x in wikicode.filter_templates()
                     if x.name.matches('ep')]):
             ep_entry = self.build_episode_entry(num=num)
             if previous_entry_wiki:
@@ -931,7 +931,7 @@ class EpListBot(EpisodeBot):
         else:
             ep_entry_dict = self.build_episode_entry_dict(num=num)
             existing_entry = next(x for x in wikicode.filter_templates()
-                if x.has_param('ep') and x.name.matches('Episode table entry') and ep.code in x['ep'])
+                if x.has_param('ep') and x.name.matches('Episode table entry') and re.search(ep.code_regex, x['ep']))
             for k, v in ep_entry_dict.items():
                 if (v and
                     not (existing_entry.has_param(k) and
@@ -1036,14 +1036,14 @@ class TranscriptListBot(EpisodeBot):
         ep_entry = self.build_transcript_entry()
 
         # create new entry from scratch if it doesn't exist yet, inserting after previous episode
-        if ep.code not in text:
+        if not re.search(ep.code_regex, text):
             ep_entry = self.build_transcript_entry()
             prev_ep = ep.get_previous_episode()
             # if previous episode isn't there, search episode num - 1 until find one (otherwise none)
-            while prev_ep and (prev_ep.code not in text):
+            while prev_ep and not re.search(prev_ep.code_regex, text):
                 prev_ep = prev_ep.get_previous_episode()
             prev_ep_entry = next((x for x in text.splitlines()
-                                  if prev_ep and prev_ep.code in x),
+                                  if prev_ep and re.search(prev_ep.code_regex, x)),
                                  '== Miscellaneous ==')
             text = text.replace(prev_ep_entry,
                                 '\n'.join([prev_ep_entry, ep_entry]))
@@ -1051,7 +1051,7 @@ class TranscriptListBot(EpisodeBot):
             self.put_current(text, summary=f"Add entry for {ep.code} (via pywikibot)")
         # if it exists, replace entry with current values if needed
         else:
-            current_entry = next((x for x in text.splitlines() if ep.code in x), None)
+            current_entry = next((x for x in text.splitlines() if re.search(ep.code_regex, x)), None)
             text = text.replace(current_entry, ep_entry)
             self.put_current(text, summary=f"Updating entry for {ep.code} (via pywikibot)")
 
@@ -1234,7 +1234,7 @@ class AirdateBot(EpisodeBot):
         airdate_dict = self.opt.airdate_dict
 
         # add current episode if applicable
-        if airdate_dict and self.opt.ep.code not in airdate_dict:
+        if airdate_dict and not re.search(self.opt.ep.code_regex, airdate_dict):
             airdate_dict[self.opt.ep.code] = self.opt.airdate
 
         return airdate_dict
@@ -1274,14 +1274,14 @@ class AirdateBot(EpisodeBot):
             return None
         self.opt.airdate_dict = airdate_dict
 
-        if ep.code not in text:
+        if not re.search(ep.code_regex, text):
             prev_ep = Ep(self.get_previously_aired_episode())
-            prev_entry = next(x for x in text.splitlines() if prev_ep.code in x)
+            prev_entry = next(x for x in text.splitlines() if re.search(prev_ep.code_regex, x))
             text = text.replace(prev_entry,
                                 '\n'.join([prev_entry, new_entry])
                                 )
         else:
-            current_entry = next(x for x in text.splitlines() if ep.code in x)
+            current_entry = next(x for x in text.splitlines() if re.search(ep.code_regex, x))
             text = text.replace(current_entry, new_entry)
 
         self.put_current(text, summary=f"Adding airdate for {ep.code} (via pywikibot)")
@@ -1465,7 +1465,7 @@ class MidstAppendixBot(EpArrayBot):
         text = text.replace('\t', '    ')
 
         current_entry = next((x for x in re.split(r'\n\s+\},\n',
-                            text) if re.search(fr'\["{ep.code}"\]', x)),
+                            text) if re.search(ep.code_regex, x)),
                             '')
         if current_entry:
             current_entry += '\n    },\n'
