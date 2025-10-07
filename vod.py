@@ -1238,7 +1238,7 @@ class AirdateBot(EpisodeBot):
         airdate_dict = self.opt.airdate_dict
 
         # add current episode if applicable
-        if airdate_dict and not re.search(self.opt.ep.code_regex, airdate_dict):
+        if airdate_dict and not re.search(self.opt.ep.code_regex, str(airdate_dict)):
             airdate_dict[self.opt.ep.code] = self.opt.airdate
 
         return airdate_dict
@@ -1486,7 +1486,7 @@ class MidstAppendixBot(EpArrayBot):
             text = text.replace(current_entry, new_entry)
         else:
             prev_entry = next((x for x in re.split(r'\n\s+\},\n',
-                                                   text) if re.search(fr'\["{ep.get_previous_episode().code}"\]', x)),
+                                                   text) if ep.get_previous_episode() and re.search(ep.get_previous_episode().code_regex, x)),
                               '') + '\n    },\n'
             text = text.replace(prev_entry, '\n'.join([prev_entry, new_entry]))
 
