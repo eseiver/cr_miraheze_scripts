@@ -898,7 +898,7 @@ class EpListBot(EpisodeBot):
         # try finding by episode code
         previous_entry_wiki = next((x for x in wikicode.filter_templates()
                 if x.has_param('ep') and x.name.matches('Episode table entry') and
-                prev_ep and re.search(prev_ep.code_regex, x['ep'])), '')
+                prev_ep and re.search(prev_ep.code_regex, str(x['ep']))), '')
         #if that fails, try finding the last entry
         if not previous_entry_wiki:
             for template in reversed(wikicode.filter_templates()):
@@ -931,7 +931,7 @@ class EpListBot(EpisodeBot):
         else:
             ep_entry_dict = self.build_episode_entry_dict(num=num)
             existing_entry = next(x for x in wikicode.filter_templates()
-                if x.has_param('ep') and x.name.matches('Episode table entry') and re.search(ep.code_regex, x['ep']))
+                if x.has_param('ep') and x.name.matches('Episode table entry') and re.search(ep.code_regex, str(x['ep'])))
             for k, v in ep_entry_dict.items():
                 if (v and
                     not (existing_entry.has_param(k) and
@@ -1157,6 +1157,10 @@ class NavboxBot(EpisodeBot):
         ep = self.opt.ep
 
         self.current_page = pywikibot.Page(self.site, navbox_name)
+        # if page doesn't exist, warn user
+        if not self.current_page.exists():
+            pywikibot.output(f"No navbox named <<yellow>>{self.opt.ep.campaign.navbox}<<default>> exists; skipping")
+            return None
         wikicode = self.get_wikicode()
 
         if not any([ep.code.lower() in str(x).lower() for x in wikicode.filter_templates()
