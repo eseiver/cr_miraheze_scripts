@@ -114,7 +114,7 @@ class PodcastBot(SingleSiteBot, ExistingPageBot):
         self.initialize()
         ep = self.opt.ep
         text = self.opt.text
-        if ep.code in text:
+        if re.search(ep.code_regex, text):
             existing_url = re.search(fr'\["{ep.code}"\]\s*=\s*"(?P<existing_url>.*?)",',
                                     text).groupdict().get('existing_url')
         else:
@@ -128,11 +128,11 @@ class PodcastBot(SingleSiteBot, ExistingPageBot):
         prev_ep = ep.get_previous_episode()
 
         # if it already exists as an entry, substitute in url
-        if ep.code in text:
+        if re.search(ep.code_regex, text):
             text = re.sub(fr'\["{ep.code}"\]\s*=.*', fr'["{ep.code}"] = "{url}",', text)
 
         # if previous episode is already there, append after it
-        elif prev_ep and prev_ep.code in text:
+        elif prev_ep and re.search(prev_ep.code_regex, text):
             prev_entry = next(x for x in text.splitlines()
                 if any([y in x for y in prev_ep.generate_equivalent_codes()]))
             new_entry = f'    ["{ep.code}"] = "{url}",'
