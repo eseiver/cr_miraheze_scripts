@@ -202,7 +202,7 @@ class YoutubeTranscript:
             return None
         else:
             if not hasattr(self, '_transcript_list') or self._transcript_list is None:
-                self._transcript_list = YouTubeTranscriptApi.list_transcripts(self.yt.yt_id)
+                self._transcript_list = YouTubeTranscriptApi().list(self.yt.yt_id)
             return self._transcript_list
 
     @property
@@ -234,7 +234,7 @@ class YoutubeTranscript:
         except AttributeError:
             pywikibot.output(f'No YouTube ID given or found for {self.ep.code}')
         if transcript:
-            captions = transcript.fetch(preserve_formatting=True)
+            captions = transcript.fetch(preserve_formatting=True).to_raw_data()
             self.captions_dict[language] = captions
             if self.write_ts_file:
                 self.save_to_json_file(captions=captions, language=language)
