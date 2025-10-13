@@ -909,8 +909,8 @@ class EpListBot(EpisodeBot):
         num = int(str(previous_entry_wiki['no'].value)) + 1 if previous_entry_wiki else ep.number
 
         # create new table entry from scratch if it doesn't exist yet, inserting after previous episode
-        if not any([re.search(ep.code_regex, str(x)) for x in wikicode.filter_templates()
-                    if x.name.matches('ep')]):
+        if not any([re.search(ep.code_regex, str(x['ep'])) for x in wikicode.filter_templates()
+                    if x.name.matches('episode table entry') and x.has_param('ep')]):
             ep_entry = self.build_episode_entry(num=num)
             if previous_entry_wiki:
                 previous_entry = ''.join(['|' + str(x) for x in previous_entry_wiki.params]) + '}}'
