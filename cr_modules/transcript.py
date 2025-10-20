@@ -234,10 +234,11 @@ class YoutubeTranscript:
         except AttributeError:
             pywikibot.output(f'No YouTube ID given or found for {self.ep.code}')
         if transcript:
-            captions = transcript.fetch(preserve_formatting=True).to_raw_data()
+            captions_obj = transcript.fetch(preserve_formatting=True)
+            captions = captions_obj.to_raw_data()
             self.captions_dict[language] = captions
             if self.write_ts_file:
-                self.save_to_json_file(captions=captions, language=language)
+                self.save_to_json_file(captions=captions_obj, language=language)
 
         return captions
 
