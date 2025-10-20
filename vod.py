@@ -319,7 +319,11 @@ class EpisodeBot(
             image_name = self.opt.ep.icon_filename
         file = None
         if infobox.has_param(param_name) and self.opt.upload:
-            image_value = (remove_comments(infobox[param_name].value)).strip()
+            image_value = (
+                (remove_comments(infobox[param_name].value))
+                .strip()
+                .replace('File:', '')
+                )
             if image_value and 'file' not in image_value.lower():
                 file_value = 'File:' + image_value
             elif not image_value:
@@ -333,7 +337,7 @@ class EpisodeBot(
             # if image already (or to be) uploaded but not in param, add to infobox
             if not image_value:
                 infobox[param_name] = image_name
-            if self.opt.upload and image_value and image_value != image_name:
+            if self.opt.upload and image_value != image_name:
                 pywikibot.output(
                     f'Infobox image {image_value} does not match entered {image_name}. Please resolve and try again.')
                 sys.exit()
