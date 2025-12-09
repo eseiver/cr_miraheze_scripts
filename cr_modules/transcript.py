@@ -53,6 +53,8 @@ SPEAKER_TAGS_RU = [
     'ЭШЛИ',
 ]
 
+# Currently for Campaign 4, only criteria 3 seems to apply
+
 def break_criteria_1(line, break_taken=False, during_break=False):
     '''Brennan says they're taking a break'''
     if (not break_taken and not during_break and
@@ -104,11 +106,11 @@ class Breakfinder:
     break_found: bool = False
 
     def __post_init__(self):
-        self.revised_transcript = self.find_break()
-        if not self.break_found:
-            self.revised_transcript = self.find_break(break_function=break_criteria_2)
-        if not self.break_found:
-            self.revised_transcript = self.find_break(break_function=break_criteria_3)
+        self.revised_transcript = self.find_break(break_function=break_criteria_3)
+        # if not self.break_found:
+        #     self.revised_transcript = self.find_break(break_function=break_criteria_2)
+        # if not self.break_found:
+        #     self.revised_transcript = self.find_break(break_function=break_criteria_3)
         try:
             assert self.revised_transcript == self.transcript or 'BREAK ENDS' in self.revised_transcript, 'End of break not detected'
         except AssertionError as e:
@@ -298,7 +300,7 @@ class YoutubeTranscript:
 
         found_music = False
 
-        # don't worry about deleting the intro song if not English or main campaign
+        # don't worry about handling intro/cold open if not English or main campaign
         if language != DEFAULT_LANGUAGE or not self.ep.is_campaign:
             preshow_done = True
 
@@ -325,7 +327,7 @@ class YoutubeTranscript:
                 if during_preshow:
                     print(fr'error finding pre-show for {self.ep}')
                 during_preshow = True
-                line_in_progress += (line + '\n\n== Pre-show ==\n\n')
+                line_in_progress += ('\n\n== Pre-show ==\n\n\n' + line)
                 continue
             elif during_preshow and line.startswith('BRENNAN:'):
                 during_preshow = False
