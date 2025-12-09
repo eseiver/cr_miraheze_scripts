@@ -22,9 +22,19 @@ BREAK_PHRASES = [
     'see you in a few minutes',
 ]
 DURING_BREAK_PHRASES = [
-    'hey critters! laura bailey here', 'open your heart to chaos', 'hi critters, sam riegel here',
-    "chop it off. let's do it.", '(gale laughing) later, chudruckers!'
+    '♪ (heroic music) ♪', 'Welcome to Weird Kids', 'Diving into Daggerheart is now even easier',
+    "cool stuff available in the Critical Role shop", 'This week on "Critical Roadshow,"'
 ]
+
+PRESHOW_PHRASES = [
+    "this episode of Critical Role",
+]
+
+DURING_PRESHOW_PHRASES = [
+    "Our sponsor tonight", "Critical Role Announcement Playhouse"
+]
+
+ALL_PRESHOW_PHRASES = PRESHOW_PHRASES + DURING_PRESHOW_PHRASES 
 
 BREAK_BEGINS = '\n\n<!-- BREAK BEGINS\n'
 
@@ -43,10 +53,12 @@ SPEAKER_TAGS_RU = [
     'ЭШЛИ',
 ]
 
+# Currently for Campaign 4, only criteria 3 seems to apply
+
 def break_criteria_1(line, break_taken=False, during_break=False):
-    '''Matt says they're taking a break'''
+    '''Brennan says they're taking a break'''
     if (not break_taken and not during_break and
-        line.startswith('MATT:') and
+        line.startswith('BRENNAN:') and
         any([x in line.lower() for x in BREAK_PHRASES
             ])):
         return True
@@ -94,11 +106,11 @@ class Breakfinder:
     break_found: bool = False
 
     def __post_init__(self):
-        self.revised_transcript = self.find_break()
-        if not self.break_found:
-            self.revised_transcript = self.find_break(break_function=break_criteria_2)
-        if not self.break_found:
-            self.revised_transcript = self.find_break(break_function=break_criteria_3)
+        self.revised_transcript = self.find_break(break_function=break_criteria_3)
+        # if not self.break_found:
+        #     self.revised_transcript = self.find_break(break_function=break_criteria_2)
+        # if not self.break_found:
+        #     self.revised_transcript = self.find_break(break_function=break_criteria_3)
         try:
             assert self.revised_transcript == self.transcript or 'BREAK ENDS' in self.revised_transcript, 'End of break not detected'
         except AssertionError as e:
@@ -131,8 +143,7 @@ class Breakfinder:
                 new_first_line = old_first_line + BREAK_BEGINS
                 self.break_found = True
                 continue
-            elif (during_break and line.startswith('MATT:')
-                  and welcome_back(line)):
+            elif during_break and line.startswith('BRENNAN:'):  # Assumes Brennan not in break
                 during_break = False
                 break_taken = True
                 next_lines = '\n'.join(lines[i+1:i+5])   # avoids adding this twice
@@ -202,7 +213,7 @@ class YoutubeTranscript:
             return None
         else:
             if not hasattr(self, '_transcript_list') or self._transcript_list is None:
-                self._transcript_list = YouTubeTranscriptApi.list_transcripts(self.yt.yt_id)
+                self._transcript_list = YouTubeTranscriptApi().list(self.yt.yt_id)
             return self._transcript_list
 
     @property
@@ -234,10 +245,11 @@ class YoutubeTranscript:
         except AttributeError:
             pywikibot.output(f'No YouTube ID given or found for {self.ep.code}')
         if transcript:
-            captions = transcript.fetch(preserve_formatting=True)
+            captions_obj = transcript.fetch(preserve_formatting=True)
+            captions = captions_obj.to_raw_data()
             self.captions_dict[language] = captions
             if self.write_ts_file:
-                self.save_to_json_file(captions=captions, language=language)
+                self.save_to_json_file(captions=captions_obj, language=language)
 
         return captions
 
@@ -280,17 +292,17 @@ class YoutubeTranscript:
         return preprocessed_captions
 
     def combine_preprocessed_captions(self, preprocessed_captions, language=DEFAULT_LANGUAGE):
-        during_intro = False
-        intro_done = False
+        during_preshow = False
+        preshow_done = False
         active_quote = False
         fixed_lines = []
         line_in_progress = ''
 
         found_music = False
 
-        # don't worry about deleting the intro song if not English or main campaign
+        # don't worry about handling intro/cold open if not English or main campaign
         if language != DEFAULT_LANGUAGE or not self.ep.is_campaign:
-            intro_done = True
+            preshow_done = True
 
         if language == 'ru':
             speaker_tags = SPEAKER_TAGS_RU
@@ -304,34 +316,23 @@ class YoutubeTranscript:
 
         for i, line in enumerate(preprocessed_captions):
             next_line = (preprocessed_captions[i+1]
-                         if not intro_done and i < len(preprocessed_captions) - 1
+                         if i < len(preprocessed_captions) - 1
                          else '')
 
-            # ignore the intro song (with predictable beginning and end), add Part I header
-            # if not during_intro and not intro_done:
+            # no intro song
 
-            if (not during_intro and
-                not intro_done and
-                (re.search(r"♪ It's Thursday night ♪", line) or
-                "♪ critical" in line.strip().lower())):
-                if during_intro:
-                    print(fr'error finding intro for {self.ep}')
-                during_intro = True
+            if (not during_preshow and
+                not preshow_done and
+                any(n in line for n in ALL_PRESHOW_PHRASES)):
+                if during_preshow:
+                    print(fr'error finding pre-show for {self.ep}')
+                during_preshow = True
+                line_in_progress += ('\n\n== Pre-show ==\n\n\n' + line)
                 continue
-            elif during_intro and (welcome_back(line, language=language) or
-                                   any(x in line.lower() for x in [
-                                       'flames',
-                                       'fire',
-                                       'wind'
-                                   ])):
-                during_intro = False
-                intro_done = True
-                if welcome_back(line, language=language):
-                    line_in_progress += ('\n\n== Part I ==\n\n' + line)
-                else:
-                    line_in_progress += '\n\n== Part I =='
-                continue
-            elif during_intro:
+            elif during_preshow and line.startswith('BRENNAN:'):
+                during_preshow = False
+                preshow_done = True
+                line_in_progress += ('\n\n== Part I ==\n\n' + line)
                 continue
 
             # if ongoing quote, the first '"' can be ignored
@@ -410,7 +411,7 @@ class YoutubeTranscript:
         transcript = self.combine_preprocessed_captions(preprocessed_captions=preprocessed_captions,
                                                 language=language)
         if language == DEFAULT_LANGUAGE and self.ep.is_campaign:
-            transcript = '== Pre-show ==\n' + transcript
+            transcript = '== Cold open ==\n\n' + transcript
 
         return transcript
 
