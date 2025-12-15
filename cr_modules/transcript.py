@@ -22,8 +22,8 @@ BREAK_PHRASES = [
     'see you in a few minutes',
 ]
 DURING_BREAK_PHRASES = [
-    '♪ (heroic music) ♪', 'Welcome to Weird Kids', 'Diving into Daggerheart is now even easier',
-    "cool stuff available in the Critical Role shop", 'This week on "Critical Roadshow,"'
+    '♪ (heroic music) ♪', '(upbeat music)', 'welcome to weird kids', 'diving into daggerheart is now even easier',
+    "you can nab in the critical role shop", 'this week on "critical roadshow,"'
 ]
 
 PRESHOW_PHRASES = [
