@@ -327,7 +327,9 @@ class YoutubeTranscript:
                 if during_preshow:
                     print(fr'error finding pre-show for {self.ep}')
                 during_preshow = True
-                line_in_progress += ('\n\n== Pre-show ==\n\n\n' + line)
+                line_in_progress = (
+                    '\n\n== Pre-show ==\n\n\n' + line_in_progress + line
+                )
                 continue
             elif during_preshow and line.startswith('BRENNAN:'):
                 during_preshow = False
