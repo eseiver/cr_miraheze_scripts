@@ -1913,6 +1913,13 @@ def main(*args: str) -> None:
                 bot11 = TranscriptRedirectBot(generator=gen, **options)
                 bot11.treat_page()
 
+        if options.get('transcript_list'):
+            if options['ep'].prefix in TRANSCRIPT_EXCLUSIONS:
+                pywikibot.output(f'\nSkipping transcript list update for {options["ep"].show.title} episode')
+            else:
+                bot12 = TranscriptListBot(generator=gen, **options)
+                bot12.treat_page()
+
         if options.get('ts'):
             dupe_count = len(options['ts'].dupe_lines[DEFAULT_LANGUAGE])
             if dupe_count and '<!-- DUPLICATE' in options['ts'].transcript_dict[DEFAULT_LANGUAGE]:
@@ -1923,19 +1930,12 @@ def main(*args: str) -> None:
                 has_dupes = False
                 pywikibot.output('No duplicates found in transcript to process.')
             if dupes:
-                bot12 = DupeDetectionBot(generator=gen, **options)
-                bot12.current_page = pywikibot.Page(bot11.site, f"Transcript:{options['new_ep_name']}")
-                bot12.treat_page()
+                bot13 = DupeDetectionBot(generator=gen, **options)
+                bot13.current_page = pywikibot.Page(bot11.site, f"Transcript:{options['new_ep_name']}")
+                bot13.treat_page()
             elif has_dupes:
                 command = f"\n<<yellow>>python pwb.py dupes -ep:{options['ep'].code} -yt:{options['yt'][0].yt_id}<<default>>"
                 pywikibot.output(f'Skipping ts duplicate processing. You can run this later:{command}')
-
-        if options.get('transcript_list'):
-            if options['ep'].prefix in TRANSCRIPT_EXCLUSIONS:
-                pywikibot.output(f'\nSkipping transcript list update for {options["ep"].show.title} episode')
-            else:
-                bot13 = TranscriptListBot(generator=gen, **options)
-                bot13.treat_page()
 
         if options.get('long_short'):
             if options['ep'].prefix in ['4SD', 'Midst']:
